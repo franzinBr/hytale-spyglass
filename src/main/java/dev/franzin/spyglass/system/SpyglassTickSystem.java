@@ -66,7 +66,8 @@ public class SpyglassTickSystem extends EntityTickingSystem<EntityStore> {
     }
 
     public boolean isSpyglassStillEquipped(Player player) {
-        return Objects.requireNonNull(player.getInventory().getItemInHand()).getItemId().equals(Spyglass.SPYGLASS_ITEM_ID);
+        var item = player.getInventory().getItemInHand();
+        return item != null && item.getItemId().equals(Spyglass.SPYGLASS_ITEM_ID);
     }
 
     @Override
