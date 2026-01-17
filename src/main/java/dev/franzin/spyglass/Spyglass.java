@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import dev.franzin.spyglass.interaction.SpyglassStepZoomInteraction;
 import dev.franzin.spyglass.interaction.SpyglassZoomInteraction;
 import dev.franzin.spyglass.system.SpyglassTickSystem;
 
@@ -23,6 +24,7 @@ public class Spyglass extends JavaPlugin {
     public static final String NAMESPACE = "Spyglass";
     public static final String SPYGLASS_ITEM_ID = "Spyglass";
     public static final String ZOOM_INTERACTION_ID = "Spyglass_Zoom";
+    public static final String STEP_ZOOM_INTERACTION_ID = "Spyglass_Step_Zoom";
 
     public Spyglass(@Nonnull JavaPluginInit init) {
         super(init);
@@ -33,11 +35,18 @@ public class Spyglass extends JavaPlugin {
     protected void setup() {
         log("Registering plugin...");
 
-        Interaction.CODEC.register(
+        this.getCodecRegistry(Interaction.CODEC).register(
                 ZOOM_INTERACTION_ID,
                 SpyglassZoomInteraction.class,
                 SpyglassZoomInteraction.CODEC
         );
+
+        this.getCodecRegistry(Interaction.CODEC).register(
+                STEP_ZOOM_INTERACTION_ID,
+                SpyglassStepZoomInteraction.class,
+                SpyglassStepZoomInteraction.CODEC
+        );
+
 
         getEntityStoreRegistry().registerSystem(new SpyglassTickSystem());
 

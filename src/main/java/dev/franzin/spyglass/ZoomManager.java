@@ -32,8 +32,6 @@ public final class ZoomManager {
 
     private final Map<UUID, ZoomState> zoomStates = new ConcurrentHashMap<>();
 
-    private final ZoomConfig config = new ZoomConfig();
-
     private ZoomManager() {}
 
     public static ZoomManager getInstance() {
@@ -41,9 +39,9 @@ public final class ZoomManager {
     }
 
     public void enableZoom(@Nonnull UUID playerId, @Nonnull Player player, @Nonnull PlayerRef playerRef) {
-        ZoomState state = new ZoomState(playerRef, player, config.MAX_DISTANCE);
+        ZoomState state = new ZoomState(playerRef, player, ZoomConfig.MAX_DISTANCE);
         zoomStates.put(playerId, state);
-        sendCameraPacket(playerRef, config.MAX_DISTANCE);
+        sendCameraPacket(playerRef, ZoomConfig.MAX_DISTANCE);
         enableSpyglassOverlayHud(player, playerRef);
     }
 
@@ -77,6 +75,23 @@ public final class ZoomManager {
         return zoomStates.containsKey(playerId);
     }
 
+    public void stepZoom(@Nonnull UUID playerId) {
+        ZoomState state = zoomStates.get(playerId);
+
+        if (state == null) {
+            return;
+        }
+
+        float new_zoom_multiplier = state.zoom_multiplier+ZoomConfig.ZOOM_MULTIPLIER_STEP;
+
+        if (new_zoom_multiplier > ZoomConfig.MAX_ZOOM_MULTIPLIER) {
+            new_zoom_multiplier = ZoomConfig.DEFAULT_ZOOM_MULTIPLIER;
+        }
+
+
+        state.zoom_multiplier = new_zoom_multiplier;
+    }
+
     public void updateZoom(
             @Nonnull UUID playerId,
             @Nonnull CommandBuffer<EntityStore> commandBuffer,
@@ -88,7 +103,7 @@ public final class ZoomManager {
             return;
         }
 
-        float targetDistance = calculateSafeDistance(commandBuffer, world, entityRef);
+        float targetDistance = calculateSafeDistance(commandBuffer, world, entityRef, state);
 
         if (shouldUpdate(state, targetDistance)) {
             state.currentDistance = targetDistance;
@@ -99,29 +114,31 @@ public final class ZoomManager {
     private boolean shouldUpdate(@Nonnull ZoomState state, float newDistance) {
         float diff = Math.abs(newDistance - state.currentDistance);
         boolean movingCloser = newDistance < state.currentDistance;
-        return diff > config.UPDATE_THRESHOLD || movingCloser;
+        return diff > ZoomConfig.UPDATE_THRESHOLD || movingCloser;
     }
 
     private float calculateSafeDistance(
             @Nonnull CommandBuffer<EntityStore> commandBuffer,
             @Nonnull World world,
-            @Nonnull Ref<EntityStore> entityRef
+            @Nonnull Ref<EntityStore> entityRef,
+            @Nonnull ZoomState state
     ) {
         Transform transform = TargetUtil.getLook(entityRef, commandBuffer);
         Vector3d position = transform.getPosition();
         Vector3d direction = transform.getDirection();
+        float max_distance = ZoomConfig.MAX_DISTANCE * state.zoom_multiplier;
 
         Vector3i hitBlock = TargetUtil.getTargetBlock(
                 world,
                 (blockId, fluidId) -> blockId != 0,
                 position.x, position.y, position.z,
                 direction.x, direction.y, direction.z,
-                config.MAX_DISTANCE
+                max_distance
         );
 
 
         if (hitBlock == null) {
-            return config.MAX_DISTANCE;
+            return max_distance;
         }
 
         double dx = hitBlock.x + 0.5 - position.x;
@@ -129,8 +146,8 @@ public final class ZoomManager {
         double dz = hitBlock.z + 0.5 - position.z;
         float distanceToBlock = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-        float safeDistance = distanceToBlock - config.COLLISION_MARGIN;
-        return clamp(safeDistance, config.MIN_DISTANCE, config.MAX_DISTANCE);
+        float safeDistance = distanceToBlock - ZoomConfig.COLLISION_MARGIN;
+        return Math.clamp(safeDistance, ZoomConfig.MIN_DISTANCE, max_distance);
     }
 
     private void sendCameraPacket(@Nonnull PlayerRef playerRef, float distance) {
@@ -162,26 +179,28 @@ public final class ZoomManager {
 
     }
 
-    private static float clamp(float value, float min, float max) {
-        return Math.max(min, Math.min(max, value));
-    }
-
     private static class ZoomState {
         final PlayerRef playerRef;
         final Player player;
         float currentDistance;
+        float zoom_multiplier;
 
         ZoomState(PlayerRef playerRef,  Player player, float initialDistance) {
             this.playerRef = playerRef;
             this.player = player;
             this.currentDistance = initialDistance;
+            this.zoom_multiplier = 1.0f;
         }
     }
 
     public static class ZoomConfig {
-        public float MAX_DISTANCE = 20.0f;
-        public float MIN_DISTANCE = 1.0f;
-        public float COLLISION_MARGIN = 1.0f;
-        public float UPDATE_THRESHOLD = 0.3f;
+        public static final float MAX_DISTANCE = 20.0f;
+        public static final float MIN_DISTANCE = 1.0f;
+        public static final float COLLISION_MARGIN = 1.0f;
+        public static final float UPDATE_THRESHOLD = 0.3f;
+        public static final float DEFAULT_ZOOM_MULTIPLIER = 1.0f;
+        public static final float MAX_ZOOM_MULTIPLIER = 2.5f;
+        public static final float ZOOM_MULTIPLIER_STEP = 0.5f;
+
     }
 }

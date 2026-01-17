@@ -47,6 +47,13 @@
     "Speed": 1.0
   },
   "Interactions": {
+    "Primary": {
+      "Interactions": [
+        {
+          "Type": "Spyglass_Step_Zoom"
+        }
+      ]
+    },
     "Secondary": {
       "Interactions": [
         {

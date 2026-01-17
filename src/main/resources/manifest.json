@@ -1,7 +1,7 @@
 {
   "Group": "dev.franzin",
   "Name": "Spyglass",
-  "Version": "0.1.1",
+  "Version": "0.2.0",
   "Description": "Adds a craftable spyglass that lets you zoom in and scout the world from afar.",
   "Authors": [
     {
