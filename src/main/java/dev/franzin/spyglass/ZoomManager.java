@@ -41,9 +41,9 @@ public final class ZoomManager {
     }
 
     public void enableZoom(@Nonnull UUID playerId, @Nonnull Player player, @Nonnull PlayerRef playerRef) {
-        ZoomState state = new ZoomState(playerRef, player, config.maxDistance);
+        ZoomState state = new ZoomState(playerRef, player, config.MAX_DISTANCE);
         zoomStates.put(playerId, state);
-        sendCameraPacket(playerRef, config.maxDistance);
+        sendCameraPacket(playerRef, config.MAX_DISTANCE);
         enableSpyglassOverlayHud(player, playerRef);
     }
 
@@ -99,7 +99,7 @@ public final class ZoomManager {
     private boolean shouldUpdate(@Nonnull ZoomState state, float newDistance) {
         float diff = Math.abs(newDistance - state.currentDistance);
         boolean movingCloser = newDistance < state.currentDistance;
-        return diff > config.updateThreshold || movingCloser;
+        return diff > config.UPDATE_THRESHOLD || movingCloser;
     }
 
     private float calculateSafeDistance(
@@ -116,12 +116,12 @@ public final class ZoomManager {
                 (blockId, fluidId) -> blockId != 0,
                 position.x, position.y, position.z,
                 direction.x, direction.y, direction.z,
-                config.maxDistance
+                config.MAX_DISTANCE
         );
 
 
         if (hitBlock == null) {
-            return config.maxDistance;
+            return config.MAX_DISTANCE;
         }
 
         double dx = hitBlock.x + 0.5 - position.x;
@@ -129,8 +129,8 @@ public final class ZoomManager {
         double dz = hitBlock.z + 0.5 - position.z;
         float distanceToBlock = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-        float safeDistance = distanceToBlock - config.collisionMargin;
-        return clamp(safeDistance, config.minDistance, config.maxDistance);
+        float safeDistance = distanceToBlock - config.COLLISION_MARGIN;
+        return clamp(safeDistance, config.MIN_DISTANCE, config.MAX_DISTANCE);
     }
 
     private void sendCameraPacket(@Nonnull PlayerRef playerRef, float distance) {
@@ -179,9 +179,9 @@ public final class ZoomManager {
     }
 
     public static class ZoomConfig {
-        public float maxDistance = 20.0f;
-        public float minDistance = 1.0f;
-        public float collisionMargin = 1.0f;
-        public float updateThreshold = 0.3f;
+        public float MAX_DISTANCE = 20.0f;
+        public float MIN_DISTANCE = 1.0f;
+        public float COLLISION_MARGIN = 1.0f;
+        public float UPDATE_THRESHOLD = 0.3f;
     }
 }
