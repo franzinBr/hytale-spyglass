@@ -1,0 +1,8 @@
+
+@MyTex = PatchStyle(TexturePath: "spyglass_overlay.png");
+
+Group {
+  Background: @MyTex;
+  LayoutMode: Left;
+  Anchor: (Top: 0, Left: 0);
+}

@@ -1,0 +1,20 @@
+{
+  "Group": "dev.franzin",
+  "Name": "Spyglass",
+  "Version": "0.1.0",
+  "Description": "Adds a craftable spyglass that lets you zoom in and scout the world from afar.",
+  "Authors": [
+    {
+      "Name": "Alan Franzin",
+      "Email": "alan.franzin2011@gmail.com",
+      "Url": "https://github.com/franzinBr"
+    }
+  ],
+  "Website": "https://github.com/franzinBr/hytale-spyglass",
+  "Main": "dev.franzin.spyglass.Spyglass",
+  "ServerVersion": "*",
+  "Dependencies": {},
+  "OptionalDependencies": {},
+  "IncludesAssetPack": true,
+  "DisabledByDefault": false
+}

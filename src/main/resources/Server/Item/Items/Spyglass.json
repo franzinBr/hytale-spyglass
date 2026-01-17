@@ -1,0 +1,67 @@
+{
+  "TranslationProperties": {
+    "Name": "items.Spyglass.name",
+    "Description": "items.Spyglass.description"
+  },
+  "Categories": ["Items.Tools"],
+  "Icon": "Icons/ItemsGenerated/Spyglass.png",
+  "Quality": "Common",
+  "ItemLevel": 12,
+  "Model": "Items/Tools/Spyglass/Spyglass.blockymodel",
+  "Texture": "Items/Tools/Spyglass/Spyglass.png",
+  "Recipe": {
+    "TimeSeconds": 3,
+    "Input": [
+      {
+        "ItemId": "Ingredient_Bar_Copper",
+        "Quantity": 3
+      },
+      {
+        "ItemId": "Ingredient_Crystal_Blue",
+        "Quantity": 1
+      },
+      {
+        "ResourceTypeId": "Wood_Trunk",
+        "Quantity": 1
+      },
+      {
+        "ItemId": "Ingredient_Fibre",
+        "Quantity": 2
+      }
+    ],
+    "BenchRequirement": [
+      {
+        "Id": "Workbench",
+        "Type": "Crafting",
+        "Categories": ["Workbench_Tools"]
+      }
+    ]
+  },
+  "Tool": {
+    "Specs": [
+      {
+        "Power": 1.0,
+        "GatherType": "SoftBlocks"
+      }
+    ],
+    "Speed": 1.0
+  },
+  "Interactions": {
+    "Secondary": {
+      "Interactions": [
+        {
+          "Type": "Spyglass_Zoom"
+        }
+      ]
+    }
+  },
+  "PlayerAnimationsId": "Pickaxe",
+  "UsePlayerAnimations": true,
+  "DroppedItemAnimation": "Items/Animations/Dropped/Dropped_Diagonal_Left.blockyanim",
+  "IconProperties": {
+    "Scale": 1.4,
+    "Rotation": [44, 279, 0],
+    "Translation": [16, 5]
+  },
+  "Scale": 2
+}
