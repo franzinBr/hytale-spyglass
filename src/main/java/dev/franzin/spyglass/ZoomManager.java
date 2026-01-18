@@ -17,8 +17,8 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
-import dev.franzin.spyglass.ui.Clean;
 import dev.franzin.spyglass.ui.Spyglass_Overlay;
+import dev.franzin.spyglass.ui.hudmanager.UIManager;
 
 import javax.annotation.Nonnull;
 import java.util.Map;
@@ -54,12 +54,12 @@ public final class ZoomManager {
     }
 
     private void enableSpyglassOverlayHud(Player player, PlayerRef playerRef) {
-        player.getHudManager().setCustomHud(playerRef,  new Spyglass_Overlay(playerRef));
+        UIManager.getInstance().setCustomHud(player, playerRef, "spyglass-overlay", new Spyglass_Overlay(playerRef));
+
     }
 
     private void disableSpyglassOverlayHud(Player player, PlayerRef playerRef) {
-        // that's a crazy workaround to remove the HUD while the API is still broken
-        player.getHudManager().setCustomHud(playerRef, new Clean(playerRef));
+        UIManager.getInstance().hideCustomHud(player, playerRef, "spyglass-overlay");
     }
 
     public boolean toggleZoom(@Nonnull UUID playerId, @Nonnull Player player, @Nonnull PlayerRef playerRef) {
