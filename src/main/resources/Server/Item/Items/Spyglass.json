@@ -66,9 +66,11 @@
   "UsePlayerAnimations": true,
   "DroppedItemAnimation": "Items/Animations/Dropped/Dropped_Diagonal_Left.blockyanim",
   "IconProperties": {
-    "Scale": 1.4,
-    "Rotation": [44, 279, 0],
-    "Translation": [16, 5]
+    "Scale": 1.0,
+    "Translation": [
+      2.0,
+      -2.0
+    ]
   },
   "Scale": 2
 }
