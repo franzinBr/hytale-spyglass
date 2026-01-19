@@ -112,9 +112,7 @@ public final class ZoomManager {
     }
 
     private boolean shouldUpdate(@Nonnull ZoomState state, float newDistance) {
-        float diff = Math.abs(newDistance - state.currentDistance);
-        boolean movingCloser = newDistance < state.currentDistance;
-        return diff > ZoomConfig.UPDATE_THRESHOLD || movingCloser;
+        return state.currentDistance != newDistance;
     }
 
     private float calculateSafeDistance(
@@ -126,19 +124,18 @@ public final class ZoomManager {
         Transform transform = TargetUtil.getLook(entityRef, commandBuffer);
         Vector3d position = transform.getPosition();
         Vector3d direction = transform.getDirection();
-        float max_distance = ZoomConfig.MAX_DISTANCE * state.zoom_multiplier;
+        float maxDistance = ZoomConfig.MAX_DISTANCE * state.zoom_multiplier;
 
         Vector3i hitBlock = TargetUtil.getTargetBlock(
                 world,
                 (blockId, fluidId) -> blockId != 0,
                 position.x, position.y, position.z,
                 direction.x, direction.y, direction.z,
-                max_distance
+                maxDistance
         );
 
-
         if (hitBlock == null) {
-            return max_distance;
+            return maxDistance;
         }
 
         double dx = hitBlock.x + 0.5 - position.x;
@@ -146,20 +143,27 @@ public final class ZoomManager {
         double dz = hitBlock.z + 0.5 - position.z;
         float distanceToBlock = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-        float safeDistance = distanceToBlock - ZoomConfig.COLLISION_MARGIN;
-        return Math.clamp(safeDistance, ZoomConfig.MIN_DISTANCE, max_distance);
+        float collisionMargin = computeCollisionMargin(maxDistance);
+        float safeDistance = distanceToBlock - collisionMargin;
+
+        return Math.clamp(safeDistance, ZoomConfig.MIN_DISTANCE, maxDistance);
+    }
+
+    private float computeCollisionMargin(float targetDistance) {
+        float scaledMargin = ZoomConfig.BASE_COLLISION_MARGIN + (targetDistance * ZoomConfig.COLLISION_SCALE_FACTOR);
+        return Math.min(scaledMargin, ZoomConfig.MAX_COLLISION_MARGIN);
     }
 
     private void sendCameraPacket(@Nonnull PlayerRef playerRef, float distance) {
         ServerCameraSettings settings = buildSettings(distance);
         playerRef.getPacketHandler().writeNoCache(
-                new SetServerCamera(ClientCameraView.Custom, false, settings)
+                new SetServerCamera(ClientCameraView.Custom, true, settings)
         );
     }
 
     private void resetCamera(@Nonnull PlayerRef playerRef) {
         playerRef.getPacketHandler().writeNoCache(
-                new SetServerCamera(ClientCameraView.Custom, false, null)
+                new SetServerCamera(ClientCameraView.Custom, true, null)
         );
     }
 
@@ -170,7 +174,7 @@ public final class ZoomManager {
         s.distance = -distance;
         s.eyeOffset = true;
         s.positionLerpSpeed = 0.2F;
-        s.rotationLerpSpeed = 0.01F;
+        s.rotationLerpSpeed = 0.1F;
         s.movementMultiplier = new Vector3f(0.33F, 0.33F, 0.33F);
         s.positionDistanceOffsetType = PositionDistanceOffsetType.DistanceOffset;
         s.sendMouseMotion = true;
@@ -196,11 +200,13 @@ public final class ZoomManager {
     public static class ZoomConfig {
         public static final float MAX_DISTANCE = 20.0f;
         public static final float MIN_DISTANCE = 1.0f;
-        public static final float COLLISION_MARGIN = 1.0f;
-        public static final float UPDATE_THRESHOLD = 0.3f;
+
         public static final float DEFAULT_ZOOM_MULTIPLIER = 1.0f;
         public static final float MAX_ZOOM_MULTIPLIER = 2.5f;
         public static final float ZOOM_MULTIPLIER_STEP = 0.5f;
 
+        public static final float BASE_COLLISION_MARGIN = 3.0f;
+        public static final float COLLISION_SCALE_FACTOR = 0.05f;
+        public static final float MAX_COLLISION_MARGIN = 4.0f;
     }
 }
