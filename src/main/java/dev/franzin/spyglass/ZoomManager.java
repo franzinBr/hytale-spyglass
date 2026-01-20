@@ -14,6 +14,8 @@ import com.hypixel.hytale.protocol.*;
 import com.hypixel.hytale.protocol.packets.camera.SetServerCamera;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.SoundUtil;
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
@@ -43,6 +45,7 @@ public final class ZoomManager {
         zoomStates.put(playerId, state);
         sendCameraPacket(playerRef, ZoomConfig.MAX_DISTANCE);
         enableSpyglassOverlayHud(player, playerRef);
+        playSpyglassOpenSound(playerRef);
     }
 
     public void disableZoom(@Nonnull UUID playerId) {
@@ -50,6 +53,7 @@ public final class ZoomManager {
         if (state != null) {
             resetCamera(state.playerRef);
             disableSpyglassOverlayHud(state.player, state.playerRef);
+            playSpyglassCloseSound(state.playerRef);
         }
     }
 
@@ -60,6 +64,16 @@ public final class ZoomManager {
 
     private void disableSpyglassOverlayHud(Player player, PlayerRef playerRef) {
         UIManager.getInstance().hideCustomHud(player, playerRef, "spyglass-overlay");
+    }
+
+    private void playSpyglassOpenSound(PlayerRef playerRef) {
+        int soundEventIndex = SoundEvent.getAssetMap().getIndex("SFX_Spyglass_Open");
+        SoundUtil.playSoundEvent2dToPlayer(playerRef, soundEventIndex, SoundCategory.SFX);
+    }
+
+    private void playSpyglassCloseSound(PlayerRef playerRef) {
+        int soundEventIndex = SoundEvent.getAssetMap().getIndex("SFX_Spyglass_Close");
+        SoundUtil.playSoundEvent2dToPlayer(playerRef, soundEventIndex, SoundCategory.SFX);
     }
 
     public boolean toggleZoom(@Nonnull UUID playerId, @Nonnull Player player, @Nonnull PlayerRef playerRef) {
@@ -88,7 +102,7 @@ public final class ZoomManager {
             new_zoom_multiplier = ZoomConfig.DEFAULT_ZOOM_MULTIPLIER;
         }
 
-
+        playSpyglassOpenSound(state.playerRef);
         state.zoom_multiplier = new_zoom_multiplier;
     }
 
