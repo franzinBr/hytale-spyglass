@@ -35,6 +35,14 @@ public final class UIManager {
 
     }
 
+    public boolean hasHudConflict(Player player) {
+        CustomUIHud customHud = player.getHudManager().getCustomHud();
+
+        return this.hudManager instanceof DefaultHudManager
+                && customHud != null
+                && !customHud.toString().contains("dev.franzin.spyglass");
+    }
+
     public void setCustomHud(Player player, PlayerRef playerRef, String id, CustomUIHud hud) {
         this.hudManager.setCustomHud(player, playerRef, id, hud);
     }

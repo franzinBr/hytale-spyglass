@@ -4,7 +4,6 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import dev.franzin.spyglass.ui.Clean;
-import dev.franzin.spyglass.ui.Spyglass_Overlay;
 
 public class DefaultHudManager implements IHudManager {
 
@@ -19,4 +18,3 @@ public class DefaultHudManager implements IHudManager {
         player.getHudManager().setCustomHud(playerRef, new Clean(playerRef));
     }
 }
-

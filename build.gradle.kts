@@ -16,12 +16,20 @@ repositories {
         name = "hytaleModding"
         url = uri("https://maven.hytale-modding.info/releases")
     }
+    maven {
+        name = "hytale-release"
+        url = uri("https://maven.hytale.com/release")
+    }
+    maven {
+        name = "hytale-pre-release"
+        url = uri("https://maven.hytale.com/pre-release")
+    }
 }
 
 dependencies {
     // Hytale Server API (provided by server at runtime)
-    compileOnly(files("libs/HytaleServer.jar"))
-    compileOnly("com.buuz135:MultipleHUD:1.0.3")
+    compileOnly("com.hypixel.hytale:Server:2026.01.28-87d03be09")
+    compileOnly("com.buuz135:MultipleHUD:1.0.4")
     
     // Common dependencies (will be bundled in JAR)
     implementation("com.google.code.gson:gson:2.10.1")
@@ -80,7 +88,7 @@ tasks {
 }
 
 runHytale {
-    jarUrl = "libs/HytaleServer.jar"
+    jarUrl = "https://maven.hytale.com/release/com/hypixel/hytale/Server/2026.01.28-87d03be09/Server-2026.01.28-87d03be09.jar"
     assetsPath = "libs/Assets.zip"
 }
 

@@ -12,6 +12,7 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.*;
 import com.hypixel.hytale.protocol.packets.camera.SetServerCamera;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
@@ -58,12 +59,33 @@ public final class ZoomManager {
     }
 
     private void enableSpyglassOverlayHud(Player player, PlayerRef playerRef) {
+        if(UIManager.getInstance().hasHudConflict(player)) {
+            sendDisabledHudMessage(player);
+            return;
+        }
+
         UIManager.getInstance().setCustomHud(player, playerRef, "spyglass-overlay", new Spyglass_Overlay(playerRef));
 
     }
 
     private void disableSpyglassOverlayHud(Player player, PlayerRef playerRef) {
+        if(UIManager.getInstance().hasHudConflict(player)) {
+            sendDisabledHudMessage(player);
+            return;
+        }
+
         UIManager.getInstance().hideCustomHud(player, playerRef, "spyglass-overlay");
+    }
+
+    private void sendDisabledHudMessage(Player player) {
+        player.sendMessage(
+                Message.raw("[Spyglass] HUD feature disabled. You have other HUD mods but MultipleHUD is missing.")
+                        .color("#FF6600")
+        );
+        player.sendMessage(
+                Message.raw("[Spyglass ] Install MultipleHUD to allow the spyglass HUD to work with other mods without crashes: curseforge.com/hytale/mods/multiplehud")
+                        .color("#AAAAAA")
+        );
     }
 
     private void playSpyglassOpenSound(PlayerRef playerRef) {
