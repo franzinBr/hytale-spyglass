@@ -16,14 +16,14 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
 
-public class SpyglassStepZoomInteraction extends SimpleInstantInteraction {
+public class SpyglassZoomCycleInteraction extends SimpleInstantInteraction {
 
-    public static final BuilderCodec<SpyglassStepZoomInteraction> CODEC = BuilderCodec.builder(
-                    SpyglassStepZoomInteraction.class,
-                    SpyglassStepZoomInteraction::new,
+    public static final BuilderCodec<SpyglassZoomCycleInteraction> CODEC = BuilderCodec.builder(
+                    SpyglassZoomCycleInteraction.class,
+                    SpyglassZoomCycleInteraction::new,
                     SimpleInstantInteraction.CODEC
             )
-            .documentation("Step zoom when left-clicked with a Spyglass in Zoom Mode")
+            .documentation("Cycle zoom when left-clicked with a Spyglass in Zoom Mode")
             .build();
 
     @Override
@@ -52,6 +52,6 @@ public class SpyglassStepZoomInteraction extends SimpleInstantInteraction {
             return;
         }
 
-        ZoomManager.getInstance().stepZoom(playerId);
+        ZoomManager.getInstance().zoomCycle(playerId);
     }
 }

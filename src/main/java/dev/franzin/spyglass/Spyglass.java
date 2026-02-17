@@ -13,7 +13,9 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
-import dev.franzin.spyglass.interaction.SpyglassStepZoomInteraction;
+import dev.franzin.spyglass.interaction.SpyglassZoomCycleInteraction;
+import dev.franzin.spyglass.interaction.SpyglassZoomInInteraction;
+import dev.franzin.spyglass.interaction.SpyglassZoomOutInteraction;
 import dev.franzin.spyglass.interaction.SpyglassZoomInteraction;
 import dev.franzin.spyglass.system.SpyglassTickSystem;
 
@@ -26,7 +28,9 @@ public class Spyglass extends JavaPlugin {
 
     public static final String NAMESPACE = "Spyglass";
     public static final String ZOOM_INTERACTION_ID = "Spyglass_Zoom";
-    public static final String STEP_ZOOM_INTERACTION_ID = "Spyglass_Step_Zoom";
+    public static final String ZOOM_CYCLE_INTERACTION_ID = "Spyglass_Zoom_Cycle";
+    public static final String ZOOM_IN_INTERACTION_ID = "Spyglass_Zoom_In";
+    public static final String ZOOM_OUT_INTERACTION_ID = "Spyglass_Zoom_Out";
 
     private SpyglassTickSystem spyglassTickSystem;
 
@@ -46,9 +50,21 @@ public class Spyglass extends JavaPlugin {
         );
 
         this.getCodecRegistry(Interaction.CODEC).register(
-                STEP_ZOOM_INTERACTION_ID,
-                SpyglassStepZoomInteraction.class,
-                SpyglassStepZoomInteraction.CODEC
+                ZOOM_CYCLE_INTERACTION_ID,
+                SpyglassZoomCycleInteraction.class,
+                SpyglassZoomCycleInteraction.CODEC
+        );
+
+        this.getCodecRegistry(Interaction.CODEC).register(
+                ZOOM_IN_INTERACTION_ID,
+                SpyglassZoomInInteraction.class,
+                SpyglassZoomInInteraction.CODEC
+        );
+
+        this.getCodecRegistry(Interaction.CODEC).register(
+                ZOOM_OUT_INTERACTION_ID,
+                SpyglassZoomOutInteraction.class,
+                SpyglassZoomOutInteraction.CODEC
         );
 
 

@@ -22,6 +22,7 @@ import dev.franzin.spyglass.interaction.SpyglassZoomInteraction;
 
 import javax.annotation.Nonnull;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -29,7 +30,7 @@ public class SpyglassTickSystem extends EntityTickingSystem<EntityStore> {
 
     @Nonnull
     private final Query<EntityStore> query;
-    private final Map<String, Boolean> hasZoomInteractionByItemId = new ConcurrentHashMap<>();
+    private final Map<String, Optional<ZoomManager.ZoomSettings>> zoomSettingsByItemId = new ConcurrentHashMap<>();
 
     public SpyglassTickSystem() {
         this.query = Query.and(Player.getComponentType());
@@ -58,7 +59,12 @@ public class SpyglassTickSystem extends EntityTickingSystem<EntityStore> {
             return;
         }
 
-        if (!isEquippedItemHasSpyglassInteraction(player)) {
+        Optional<ZoomManager.ZoomSettings> equippedSettings = getEquippedZoomSettings(player);
+        if (equippedSettings.isEmpty()) {
+            zoomManager.disableZoom(playerId);
+            return;
+        }
+        if (!zoomManager.isZoomConfigMatching(playerId, equippedSettings.get())) {
             zoomManager.disableZoom(playerId);
             return;
         }
@@ -69,30 +75,31 @@ public class SpyglassTickSystem extends EntityTickingSystem<EntityStore> {
         zoomManager.updateZoom(playerId, commandBuffer, world, playerRef);
     }
 
-    public boolean isEquippedItemHasSpyglassInteraction(Player player) {
+    @Nonnull
+    public Optional<ZoomManager.ZoomSettings> getEquippedZoomSettings(Player player) {
         var itemInHand = player.getInventory().getItemInHand();
         if (itemInHand == null || itemInHand.getItem() == null) {
-            return false;
+            return Optional.empty();
         }
 
         String itemId = itemInHand.getItemId();
         var interactions = itemInHand.getItem().getInteractions();
         if (interactions == null || interactions.isEmpty()) {
-            return false;
+            return Optional.empty();
         }
 
         if (itemId == null || itemId.isBlank()) {
-            return hasSpyglassZoomInteraction(interactions);
+            return findSpyglassZoomSettings(interactions);
         }
 
-        return hasZoomInteractionByItemId.computeIfAbsent(itemId, ignored -> hasSpyglassZoomInteraction(interactions));
+        return zoomSettingsByItemId.computeIfAbsent(itemId, ignored -> findSpyglassZoomSettings(interactions));
     }
 
     public void clearInteractionCache() {
-        hasZoomInteractionByItemId.clear();
+        zoomSettingsByItemId.clear();
     }
 
-    private boolean hasSpyglassZoomInteraction(Map<?, String> interactions) {
+    private Optional<ZoomManager.ZoomSettings> findSpyglassZoomSettings(Map<?, String> interactions) {
         for (String rootInteractionId : interactions.values()) {
             RootInteraction root = RootInteraction.getAssetMap().getAsset(rootInteractionId);
             if (root == null || root.getInteractionIds() == null) {
@@ -101,13 +108,20 @@ public class SpyglassTickSystem extends EntityTickingSystem<EntityStore> {
 
             for (String interactionId : root.getInteractionIds()) {
                 Interaction interaction = Interaction.getAssetMap().getAsset(interactionId);
-                if (interaction instanceof SpyglassZoomInteraction) {
-                    return true;
+                if (interaction instanceof SpyglassZoomInteraction zoomInteraction) {
+                    return Optional.of(ZoomManager.ZoomSettings.of(
+                            zoomInteraction.getMaxDistance(),
+                            zoomInteraction.getMinDistance(),
+                            zoomInteraction.getDefaultZoomMultiplier(),
+                            zoomInteraction.getMaxZoomMultiplier(),
+                            zoomInteraction.getZoomMultiplierStep(),
+                            zoomInteraction.getOverlayTexturePath()
+                    ));
                 }
             }
         }
 
-        return false;
+        return Optional.empty();
     }
 
     @Override

@@ -36,10 +36,50 @@ public class SpyglassZoomInteraction extends SimpleInstantInteraction {
                     (interaction, parent) -> interaction.overlayTexturePath = parent.overlayTexturePath
             )
             .add()
+            .appendInherited(
+                    new KeyedCodec<>("MaxDistance", Codec.FLOAT),
+                    (interaction, value) -> interaction.maxDistance = value,
+                    interaction -> interaction.maxDistance,
+                    (interaction, parent) -> interaction.maxDistance = parent.maxDistance
+            )
+            .add()
+            .appendInherited(
+                    new KeyedCodec<>("MinDistance", Codec.FLOAT),
+                    (interaction, value) -> interaction.minDistance = value,
+                    interaction -> interaction.minDistance,
+                    (interaction, parent) -> interaction.minDistance = parent.minDistance
+            )
+            .add()
+            .appendInherited(
+                    new KeyedCodec<>("DefaultZoomMultiplier", Codec.FLOAT),
+                    (interaction, value) -> interaction.defaultZoomMultiplier = value,
+                    interaction -> interaction.defaultZoomMultiplier,
+                    (interaction, parent) -> interaction.defaultZoomMultiplier = parent.defaultZoomMultiplier
+            )
+            .add()
+            .appendInherited(
+                    new KeyedCodec<>("MaxZoomMultiplier", Codec.FLOAT),
+                    (interaction, value) -> interaction.maxZoomMultiplier = value,
+                    interaction -> interaction.maxZoomMultiplier,
+                    (interaction, parent) -> interaction.maxZoomMultiplier = parent.maxZoomMultiplier
+            )
+            .add()
+            .appendInherited(
+                    new KeyedCodec<>("ZoomMultiplierStep", Codec.FLOAT),
+                    (interaction, value) -> interaction.zoomMultiplierStep = value,
+                    interaction -> interaction.zoomMultiplierStep,
+                    (interaction, parent) -> interaction.zoomMultiplierStep = parent.zoomMultiplierStep
+            )
+            .add()
             .documentation("Toggle zoom when right-clicked with a Spyglass in hand")
             .build();
 
     private String overlayTexturePath;
+    private float maxDistance = ZoomManager.ZoomConfig.MAX_DISTANCE;
+    private float minDistance = ZoomManager.ZoomConfig.MIN_DISTANCE;
+    private float defaultZoomMultiplier = ZoomManager.ZoomConfig.DEFAULT_ZOOM_MULTIPLIER;
+    private float maxZoomMultiplier = ZoomManager.ZoomConfig.MAX_ZOOM_MULTIPLIER;
+    private float zoomMultiplierStep = ZoomManager.ZoomConfig.ZOOM_MULTIPLIER_STEP;
 
     public SpyglassZoomInteraction(String id) {
         super(id);
@@ -49,6 +89,26 @@ public class SpyglassZoomInteraction extends SimpleInstantInteraction {
 
     public String getOverlayTexturePath() {
         return overlayTexturePath;
+    }
+
+    public float getMaxDistance() {
+        return maxDistance;
+    }
+
+    public float getMinDistance() {
+        return minDistance;
+    }
+
+    public float getDefaultZoomMultiplier() {
+        return defaultZoomMultiplier;
+    }
+
+    public float getMaxZoomMultiplier() {
+        return maxZoomMultiplier;
+    }
+
+    public float getZoomMultiplierStep() {
+        return zoomMultiplierStep;
     }
 
     @Override
@@ -78,7 +138,14 @@ public class SpyglassZoomInteraction extends SimpleInstantInteraction {
         @SuppressWarnings("removal")
         var playerRef = player.getPlayerRef();
 
-
-        ZoomManager.getInstance().toggleZoom(playerId, player, playerRef, overlayTexturePath);
+        ZoomManager.ZoomSettings settings = ZoomManager.ZoomSettings.of(
+                maxDistance,
+                minDistance,
+                defaultZoomMultiplier,
+                maxZoomMultiplier,
+                zoomMultiplierStep,
+                overlayTexturePath
+        );
+        ZoomManager.getInstance().toggleZoom(playerId, player, playerRef, settings);
     }
 }
