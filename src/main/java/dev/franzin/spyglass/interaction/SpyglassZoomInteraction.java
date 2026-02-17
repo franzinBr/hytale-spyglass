@@ -6,6 +6,8 @@
 package dev.franzin.spyglass.interaction;
 
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.protocol.InteractionState;
@@ -27,14 +29,27 @@ public class SpyglassZoomInteraction extends SimpleInstantInteraction {
                     SpyglassZoomInteraction::new,
                     SimpleInstantInteraction.CODEC
             )
+            .appendInherited(
+                    new KeyedCodec<>("OverlayTexturePath", Codec.STRING),
+                    (interaction, value) -> interaction.overlayTexturePath = value,
+                    interaction -> interaction.overlayTexturePath,
+                    (interaction, parent) -> interaction.overlayTexturePath = parent.overlayTexturePath
+            )
+            .add()
             .documentation("Toggle zoom when right-clicked with a Spyglass in hand")
             .build();
+
+    private String overlayTexturePath;
 
     public SpyglassZoomInteraction(String id) {
         super(id);
     }
 
     protected SpyglassZoomInteraction() {}
+
+    public String getOverlayTexturePath() {
+        return overlayTexturePath;
+    }
 
     @Override
     protected void firstRun(
@@ -64,6 +79,6 @@ public class SpyglassZoomInteraction extends SimpleInstantInteraction {
         var playerRef = player.getPlayerRef();
 
 
-        ZoomManager.getInstance().toggleZoom(playerId, player, playerRef);
+        ZoomManager.getInstance().toggleZoom(playerId, player, playerRef, overlayTexturePath);
     }
 }

@@ -6,6 +6,9 @@
 
 package dev.franzin.spyglass;
 
+import com.hypixel.hytale.assetstore.event.GenerateAssetsEvent;
+import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
+import com.hypixel.hytale.assetstore.event.RemovedAssetsEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
@@ -22,9 +25,10 @@ public class Spyglass extends JavaPlugin {
     private static Spyglass instance;
 
     public static final String NAMESPACE = "Spyglass";
-    public static final String SPYGLASS_ITEM_ID = "Spyglass";
     public static final String ZOOM_INTERACTION_ID = "Spyglass_Zoom";
     public static final String STEP_ZOOM_INTERACTION_ID = "Spyglass_Step_Zoom";
+
+    private SpyglassTickSystem spyglassTickSystem;
 
     public Spyglass(@Nonnull JavaPluginInit init) {
         super(init);
@@ -48,14 +52,33 @@ public class Spyglass extends JavaPlugin {
         );
 
 
-        getEntityStoreRegistry().registerSystem(new SpyglassTickSystem());
+        this.spyglassTickSystem = new SpyglassTickSystem();
+        getEntityStoreRegistry().registerSystem(this.spyglassTickSystem);
 
         getEventRegistry().registerGlobal(
                 PlayerDisconnectEvent.class,
                 event -> ZoomManager.getInstance().disableZoom(event.getPlayerRef().getUuid())
         );
 
+        registerAssetCacheInvalidationEvents();
+
         log("Plugin setup complete!");
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void registerAssetCacheInvalidationEvents() {
+        getEventRegistry().registerGlobal(
+                (Class) LoadedAssetsEvent.class,
+                event -> this.spyglassTickSystem.clearInteractionCache()
+        );
+        getEventRegistry().registerGlobal(
+                (Class) RemovedAssetsEvent.class,
+                event -> this.spyglassTickSystem.clearInteractionCache()
+        );
+        getEventRegistry().registerGlobal(
+                (Class) GenerateAssetsEvent.class,
+                event -> this.spyglassTickSystem.clearInteractionCache()
+        );
     }
 
     @Override

@@ -13,19 +13,23 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import dev.franzin.spyglass.Spyglass;
 import dev.franzin.spyglass.ZoomManager;
+import dev.franzin.spyglass.interaction.SpyglassZoomInteraction;
 
 import javax.annotation.Nonnull;
-import java.util.Objects;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class SpyglassTickSystem extends EntityTickingSystem<EntityStore> {
 
     @Nonnull
     private final Query<EntityStore> query;
+    private final Map<String, Boolean> hasZoomInteractionByItemId = new ConcurrentHashMap<>();
 
     public SpyglassTickSystem() {
         this.query = Query.and(Player.getComponentType());
@@ -54,7 +58,7 @@ public class SpyglassTickSystem extends EntityTickingSystem<EntityStore> {
             return;
         }
 
-        if (!isSpyglassStillEquipped(player)) {
+        if (!isEquippedItemHasSpyglassInteraction(player)) {
             zoomManager.disableZoom(playerId);
             return;
         }
@@ -65,9 +69,45 @@ public class SpyglassTickSystem extends EntityTickingSystem<EntityStore> {
         zoomManager.updateZoom(playerId, commandBuffer, world, playerRef);
     }
 
-    public boolean isSpyglassStillEquipped(Player player) {
-        var item = player.getInventory().getItemInHand();
-        return item != null && item.getItemId().equals(Spyglass.SPYGLASS_ITEM_ID);
+    public boolean isEquippedItemHasSpyglassInteraction(Player player) {
+        var itemInHand = player.getInventory().getItemInHand();
+        if (itemInHand == null || itemInHand.getItem() == null) {
+            return false;
+        }
+
+        String itemId = itemInHand.getItemId();
+        var interactions = itemInHand.getItem().getInteractions();
+        if (interactions == null || interactions.isEmpty()) {
+            return false;
+        }
+
+        if (itemId == null || itemId.isBlank()) {
+            return hasSpyglassZoomInteraction(interactions);
+        }
+
+        return hasZoomInteractionByItemId.computeIfAbsent(itemId, ignored -> hasSpyglassZoomInteraction(interactions));
+    }
+
+    public void clearInteractionCache() {
+        hasZoomInteractionByItemId.clear();
+    }
+
+    private boolean hasSpyglassZoomInteraction(Map<?, String> interactions) {
+        for (String rootInteractionId : interactions.values()) {
+            RootInteraction root = RootInteraction.getAssetMap().getAsset(rootInteractionId);
+            if (root == null || root.getInteractionIds() == null) {
+                continue;
+            }
+
+            for (String interactionId : root.getInteractionIds()) {
+                Interaction interaction = Interaction.getAssetMap().getAsset(interactionId);
+                if (interaction instanceof SpyglassZoomInteraction) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     @Override

@@ -41,11 +41,16 @@ public final class ZoomManager {
         return INSTANCE;
     }
 
-    public void enableZoom(@Nonnull UUID playerId, @Nonnull Player player, @Nonnull PlayerRef playerRef) {
+    public void enableZoom(
+            @Nonnull UUID playerId,
+            @Nonnull Player player,
+            @Nonnull PlayerRef playerRef,
+            String overlayTexturePath
+    ) {
         ZoomState state = new ZoomState(playerRef, player, ZoomConfig.MAX_DISTANCE);
         zoomStates.put(playerId, state);
         sendCameraPacket(playerRef, ZoomConfig.MAX_DISTANCE);
-        enableSpyglassOverlayHud(player, playerRef);
+        enableSpyglassOverlayHud(player, playerRef, overlayTexturePath);
         playSpyglassOpenSound(playerRef);
     }
 
@@ -58,13 +63,18 @@ public final class ZoomManager {
         }
     }
 
-    private void enableSpyglassOverlayHud(Player player, PlayerRef playerRef) {
+    private void enableSpyglassOverlayHud(Player player, PlayerRef playerRef, String overlayTexturePath) {
         if(UIManager.getInstance().hasHudConflict(player)) {
             sendDisabledHudMessage(player);
             return;
         }
 
-        UIManager.getInstance().setCustomHud(player, playerRef, "spyglass-overlay", new Spyglass_Overlay(playerRef));
+        UIManager.getInstance().setCustomHud(
+                player,
+                playerRef,
+                "spyglass-overlay",
+                new Spyglass_Overlay(playerRef, overlayTexturePath)
+        );
 
     }
 
@@ -98,12 +108,17 @@ public final class ZoomManager {
         SoundUtil.playSoundEvent2dToPlayer(playerRef, soundEventIndex, SoundCategory.SFX);
     }
 
-    public boolean toggleZoom(@Nonnull UUID playerId, @Nonnull Player player, @Nonnull PlayerRef playerRef) {
+    public boolean toggleZoom(
+            @Nonnull UUID playerId,
+            @Nonnull Player player,
+            @Nonnull PlayerRef playerRef,
+            String overlayTexturePath
+    ) {
         if (isZooming(playerId)) {
             disableZoom(playerId);
             return false;
         }
-        enableZoom(playerId, player, playerRef);
+        enableZoom(playerId, player, playerRef, overlayTexturePath);
         return true;
     }
 
