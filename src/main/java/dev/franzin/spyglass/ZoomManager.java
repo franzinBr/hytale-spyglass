@@ -41,11 +41,16 @@ public final class ZoomManager {
         return INSTANCE;
     }
 
-    public void enableZoom(@Nonnull UUID playerId, @Nonnull Player player, @Nonnull PlayerRef playerRef) {
-        ZoomState state = new ZoomState(playerRef, player, ZoomConfig.MAX_DISTANCE);
+    public void enableZoom(
+            @Nonnull UUID playerId,
+            @Nonnull Player player,
+            @Nonnull PlayerRef playerRef,
+            @Nonnull ZoomSettings settings
+    ) {
+        ZoomState state = new ZoomState(playerRef, player, settings);
         zoomStates.put(playerId, state);
-        sendCameraPacket(playerRef, ZoomConfig.MAX_DISTANCE);
-        enableSpyglassOverlayHud(player, playerRef);
+        sendCameraPacket(playerRef, settings.maxDistance());
+        enableSpyglassOverlayHud(player, playerRef, settings.overlayTexturePath());
         playSpyglassOpenSound(playerRef);
     }
 
@@ -58,13 +63,18 @@ public final class ZoomManager {
         }
     }
 
-    private void enableSpyglassOverlayHud(Player player, PlayerRef playerRef) {
+    private void enableSpyglassOverlayHud(Player player, PlayerRef playerRef, String overlayTexturePath) {
         if(UIManager.getInstance().hasHudConflict(player)) {
             sendDisabledHudMessage(player);
             return;
         }
 
-        UIManager.getInstance().setCustomHud(player, playerRef, "spyglass-overlay", new Spyglass_Overlay(playerRef));
+        UIManager.getInstance().setCustomHud(
+                player,
+                playerRef,
+                "spyglass-overlay",
+                new Spyglass_Overlay(playerRef, overlayTexturePath)
+        );
 
     }
 
@@ -98,12 +108,17 @@ public final class ZoomManager {
         SoundUtil.playSoundEvent2dToPlayer(playerRef, soundEventIndex, SoundCategory.SFX);
     }
 
-    public boolean toggleZoom(@Nonnull UUID playerId, @Nonnull Player player, @Nonnull PlayerRef playerRef) {
+    public boolean toggleZoom(
+            @Nonnull UUID playerId,
+            @Nonnull Player player,
+            @Nonnull PlayerRef playerRef,
+            @Nonnull ZoomSettings settings
+    ) {
         if (isZooming(playerId)) {
             disableZoom(playerId);
             return false;
         }
-        enableZoom(playerId, player, playerRef);
+        enableZoom(playerId, player, playerRef, settings);
         return true;
     }
 
@@ -111,21 +126,57 @@ public final class ZoomManager {
         return zoomStates.containsKey(playerId);
     }
 
-    public void stepZoom(@Nonnull UUID playerId) {
+    public boolean isZoomConfigMatching(@Nonnull UUID playerId, @Nonnull ZoomSettings settings) {
+        ZoomState state = zoomStates.get(playerId);
+        return state != null && state.settings.equals(settings);
+    }
+
+    public void zoomIn(@Nonnull UUID playerId) {
         ZoomState state = zoomStates.get(playerId);
 
         if (state == null) {
             return;
         }
 
-        float new_zoom_multiplier = state.zoom_multiplier+ZoomConfig.ZOOM_MULTIPLIER_STEP;
-
-        if (new_zoom_multiplier > ZoomConfig.MAX_ZOOM_MULTIPLIER) {
-            new_zoom_multiplier = ZoomConfig.DEFAULT_ZOOM_MULTIPLIER;
+        float newZoomMultiplier = state.zoomMultiplier + state.settings.zoomMultiplierStep();
+        if (newZoomMultiplier > state.settings.maxZoomMultiplier()) {
+            newZoomMultiplier = state.settings.maxZoomMultiplier();
         }
 
         playSpyglassOpenSound(state.playerRef);
-        state.zoom_multiplier = new_zoom_multiplier;
+        state.zoomMultiplier = newZoomMultiplier;
+    }
+
+    public void zoomOut(@Nonnull UUID playerId) {
+        ZoomState state = zoomStates.get(playerId);
+
+        if (state == null) {
+            return;
+        }
+
+        float newZoomMultiplier = state.zoomMultiplier - state.settings.zoomMultiplierStep();
+        if (newZoomMultiplier < state.settings.defaultZoomMultiplier()) {
+            newZoomMultiplier = state.settings.defaultZoomMultiplier();
+        }
+
+        playSpyglassCloseSound(state.playerRef);
+        state.zoomMultiplier = newZoomMultiplier;
+    }
+
+    public void zoomCycle(@Nonnull UUID playerId) {
+        ZoomState state = zoomStates.get(playerId);
+
+        if (state == null) {
+            return;
+        }
+
+        float newZoomMultiplier = state.zoomMultiplier + state.settings.zoomMultiplierStep();
+        if (newZoomMultiplier > state.settings.maxZoomMultiplier()) {
+            newZoomMultiplier = state.settings.defaultZoomMultiplier();
+        }
+
+        playSpyglassOpenSound(state.playerRef);
+        state.zoomMultiplier = newZoomMultiplier;
     }
 
     public void updateZoom(
@@ -160,7 +211,7 @@ public final class ZoomManager {
         Transform transform = TargetUtil.getLook(entityRef, commandBuffer);
         Vector3d position = transform.getPosition();
         Vector3d direction = transform.getDirection();
-        float maxDistance = ZoomConfig.MAX_DISTANCE * state.zoom_multiplier;
+        float maxDistance = state.settings.maxDistance() * state.zoomMultiplier;
 
         Vector3i hitBlock = TargetUtil.getTargetBlock(
                 world,
@@ -182,7 +233,7 @@ public final class ZoomManager {
         float collisionMargin = computeCollisionMargin(maxDistance);
         float safeDistance = distanceToBlock - collisionMargin;
 
-        return Math.clamp(safeDistance, ZoomConfig.MIN_DISTANCE, maxDistance);
+        return Math.clamp(safeDistance, state.settings.minDistance(), maxDistance);
     }
 
     private float computeCollisionMargin(float targetDistance) {
@@ -222,14 +273,54 @@ public final class ZoomManager {
     private static class ZoomState {
         final PlayerRef playerRef;
         final Player player;
+        final ZoomSettings settings;
         float currentDistance;
-        float zoom_multiplier;
+        float zoomMultiplier;
 
-        ZoomState(PlayerRef playerRef,  Player player, float initialDistance) {
+        ZoomState(PlayerRef playerRef, Player player, ZoomSettings settings) {
             this.playerRef = playerRef;
             this.player = player;
-            this.currentDistance = initialDistance;
-            this.zoom_multiplier = 1.0f;
+            this.settings = settings;
+            this.currentDistance = settings.maxDistance();
+            this.zoomMultiplier = settings.defaultZoomMultiplier();
+        }
+    }
+
+    public record ZoomSettings(
+            float maxDistance,
+            float minDistance,
+            float defaultZoomMultiplier,
+            float maxZoomMultiplier,
+            float zoomMultiplierStep,
+            String overlayTexturePath
+    ) {
+        public static ZoomSettings of(
+                float maxDistance,
+                float minDistance,
+                float defaultZoomMultiplier,
+                float maxZoomMultiplier,
+                float zoomMultiplierStep,
+                String overlayTexturePath
+        ) {
+            float safeMaxDistance = Math.max(0.5f, maxDistance);
+            float safeMinDistance = Math.max(0.1f, Math.min(minDistance, safeMaxDistance));
+
+            float safeDefaultMultiplier = Math.max(0.1f, defaultZoomMultiplier);
+            float safeMaxMultiplier = Math.max(safeDefaultMultiplier, maxZoomMultiplier);
+            float safeMultiplierStep = Math.max(0.01f, zoomMultiplierStep);
+
+            String safeOverlay = (overlayTexturePath == null || overlayTexturePath.isBlank())
+                    ? null
+                    : overlayTexturePath;
+
+            return new ZoomSettings(
+                    safeMaxDistance,
+                    safeMinDistance,
+                    safeDefaultMultiplier,
+                    safeMaxMultiplier,
+                    safeMultiplierStep,
+                    safeOverlay
+            );
         }
     }
 

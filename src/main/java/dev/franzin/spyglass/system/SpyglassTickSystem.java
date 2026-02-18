@@ -13,19 +13,24 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import dev.franzin.spyglass.Spyglass;
 import dev.franzin.spyglass.ZoomManager;
+import dev.franzin.spyglass.interaction.SpyglassZoomInteraction;
 
 import javax.annotation.Nonnull;
-import java.util.Objects;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class SpyglassTickSystem extends EntityTickingSystem<EntityStore> {
 
     @Nonnull
     private final Query<EntityStore> query;
+    private final Map<String, Optional<ZoomManager.ZoomSettings>> zoomSettingsByItemId = new ConcurrentHashMap<>();
 
     public SpyglassTickSystem() {
         this.query = Query.and(Player.getComponentType());
@@ -54,7 +59,12 @@ public class SpyglassTickSystem extends EntityTickingSystem<EntityStore> {
             return;
         }
 
-        if (!isSpyglassStillEquipped(player)) {
+        Optional<ZoomManager.ZoomSettings> equippedSettings = getEquippedZoomSettings(player);
+        if (equippedSettings.isEmpty()) {
+            zoomManager.disableZoom(playerId);
+            return;
+        }
+        if (!zoomManager.isZoomConfigMatching(playerId, equippedSettings.get())) {
             zoomManager.disableZoom(playerId);
             return;
         }
@@ -65,9 +75,53 @@ public class SpyglassTickSystem extends EntityTickingSystem<EntityStore> {
         zoomManager.updateZoom(playerId, commandBuffer, world, playerRef);
     }
 
-    public boolean isSpyglassStillEquipped(Player player) {
-        var item = player.getInventory().getItemInHand();
-        return item != null && item.getItemId().equals(Spyglass.SPYGLASS_ITEM_ID);
+    @Nonnull
+    public Optional<ZoomManager.ZoomSettings> getEquippedZoomSettings(Player player) {
+        var itemInHand = player.getInventory().getItemInHand();
+        if (itemInHand == null || itemInHand.getItem() == null) {
+            return Optional.empty();
+        }
+
+        String itemId = itemInHand.getItemId();
+        var interactions = itemInHand.getItem().getInteractions();
+        if (interactions == null || interactions.isEmpty()) {
+            return Optional.empty();
+        }
+
+        if (itemId == null || itemId.isBlank()) {
+            return findSpyglassZoomSettings(interactions);
+        }
+
+        return zoomSettingsByItemId.computeIfAbsent(itemId, ignored -> findSpyglassZoomSettings(interactions));
+    }
+
+    public void clearInteractionCache() {
+        zoomSettingsByItemId.clear();
+    }
+
+    private Optional<ZoomManager.ZoomSettings> findSpyglassZoomSettings(Map<?, String> interactions) {
+        for (String rootInteractionId : interactions.values()) {
+            RootInteraction root = RootInteraction.getAssetMap().getAsset(rootInteractionId);
+            if (root == null || root.getInteractionIds() == null) {
+                continue;
+            }
+
+            for (String interactionId : root.getInteractionIds()) {
+                Interaction interaction = Interaction.getAssetMap().getAsset(interactionId);
+                if (interaction instanceof SpyglassZoomInteraction zoomInteraction) {
+                    return Optional.of(ZoomManager.ZoomSettings.of(
+                            zoomInteraction.getMaxDistance(),
+                            zoomInteraction.getMinDistance(),
+                            zoomInteraction.getDefaultZoomMultiplier(),
+                            zoomInteraction.getMaxZoomMultiplier(),
+                            zoomInteraction.getZoomMultiplierStep(),
+                            zoomInteraction.getOverlayTexturePath()
+                    ));
+                }
+            }
+        }
+
+        return Optional.empty();
     }
 
     @Override
