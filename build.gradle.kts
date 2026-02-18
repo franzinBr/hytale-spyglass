@@ -28,7 +28,7 @@ repositories {
 
 dependencies {
     // Hytale Server API (provided by server at runtime)
-    compileOnly("com.hypixel.hytale:Server:2026.01.28-87d03be09")
+    compileOnly("com.hypixel.hytale:Server:2026.02.18-f3b8fff95")
     compileOnly("com.buuz135:MultipleHUD:1.0.4")
     
     // Common dependencies (will be bundled in JAR)
@@ -88,7 +88,7 @@ tasks {
 }
 
 runHytale {
-    jarUrl = "https://maven.hytale.com/release/com/hypixel/hytale/Server/2026.01.28-87d03be09/Server-2026.01.28-87d03be09.jar"
+    jarUrl = "https://maven.hytale.com/release/com/hypixel/hytale/Server/2026.02.18-f3b8fff95/Server-2026.02.18-f3b8fff95.jar"
     assetsPath = "libs/Assets.zip"
 }
 
