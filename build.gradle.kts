@@ -28,13 +28,11 @@ repositories {
 
 dependencies {
     // Hytale Server API (provided by server at runtime)
-    compileOnly("com.hypixel.hytale:Server:2026.02.18-f3b8fff95")
-    compileOnly("com.buuz135:MultipleHUD:1.0.4")
-    
+    compileOnly("com.hypixel.hytale:Server:0.5.6")
     // Common dependencies (will be bundled in JAR)
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("org.jetbrains:annotations:24.1.0")
-    
+
     // Test dependencies
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -46,11 +44,11 @@ tasks {
         options.encoding = Charsets.UTF_8.name()
         options.release = 25
     }
-    
+
     // Configure resource processing
     processResources {
         filteringCharset = Charsets.UTF_8.name()
-        
+
         // Replace placeholders in manifest.json
         val props = mapOf(
             "group" to project.group,
@@ -58,29 +56,29 @@ tasks {
             "description" to project.description
         )
         inputs.properties(props)
-        
+
         filesMatching("manifest.json") {
             expand(props)
         }
     }
-    
+
     // Configure ShadowJar (bundle dependencies)
     shadowJar {
         archiveBaseName.set(rootProject.name)
         archiveClassifier.set("")
-        
+
         // Relocate dependencies to avoid conflicts
         relocate("com.google.gson", "dev.franzin.libs.gson")
-        
+
         // Minimize JAR size (removes unused classes)
         minimize()
     }
-    
+
     // Configure tests
     test {
         useJUnitPlatform()
     }
-    
+
     // Make build depend on shadowJar
     build {
         dependsOn(shadowJar)
@@ -88,7 +86,7 @@ tasks {
 }
 
 runHytale {
-    jarUrl = "https://maven.hytale.com/release/com/hypixel/hytale/Server/2026.02.18-f3b8fff95/Server-2026.02.18-f3b8fff95.jar"
+    jarUrl = "https://maven.hytale.com/release/com/hypixel/hytale/Server/0.5.6/Server-0.5.6.jar"
     assetsPath = "libs/Assets.zip"
 }
 

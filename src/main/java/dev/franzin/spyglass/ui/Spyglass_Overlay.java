@@ -14,7 +14,7 @@ public class Spyglass_Overlay extends CustomUIHud {
 
 
     public Spyglass_Overlay(@NotNull PlayerRef playerRef) {
-        super(playerRef);
+        super(playerRef, "spyglass-overlay");
     }
 
     @Override

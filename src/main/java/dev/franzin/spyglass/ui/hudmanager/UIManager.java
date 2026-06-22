@@ -1,53 +1,26 @@
 package dev.franzin.spyglass.ui.hudmanager;
 
 
-import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
-import com.hypixel.hytale.server.core.plugin.PluginBase;
-import com.hypixel.hytale.server.core.plugin.PluginManager;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 
 
 public final class UIManager {
 
     private static final UIManager INSTANCE = new UIManager();
-    private UIManager() {
-        defineHudManager();
-    }
+    private UIManager() {}
     public static UIManager getInstance() { return INSTANCE ;}
 
-    private IHudManager hudManager;
-
-    private void defineHudManager() {
-        PluginBase multiHudPlugin = PluginManager.get().getPlugin(PluginIdentifier.fromString("Buuz135:MultipleHUD"));
-
-        if (multiHudPlugin == null) {
-            this.hudManager = new DefaultHudManager();
-            return;
-        }
-
-        try {
-            this.hudManager = new MultiHudManager();
-        } catch (NoClassDefFoundError e) {
-            this.hudManager = new DefaultHudManager();
-        }
-
-    }
-
-    public boolean hasHudConflict(Player player) {
-        CustomUIHud customHud = player.getHudManager().getCustomHud();
-
-        return this.hudManager instanceof DefaultHudManager
-                && customHud != null
-                && !customHud.toString().contains("dev.franzin.spyglass");
-    }
-
     public void setCustomHud(Player player, PlayerRef playerRef, String id, CustomUIHud hud) {
-        this.hudManager.setCustomHud(player, playerRef, id, hud);
+        if (player.getHudManager().getCustomHud(id) != null) {
+            player.getHudManager().removeCustomHud(playerRef, id);
+        }
+        player.getHudManager().addCustomHud(playerRef, hud);
     }
+
     public void hideCustomHud(Player player, PlayerRef playerRef, String id) {
-        this.hudManager.hideCustomHud(player, playerRef, id);
+        player.getHudManager().removeCustomHud(playerRef, id);
     }
 
 }

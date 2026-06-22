@@ -109,6 +109,16 @@ open class RunServerTask : DefaultTask() {
 
         // Copy plugin JAR to plugins folder
         project.tasks.findByName("shadowJar")?.outputs?.files?.firstOrNull()?.let { shadowJar ->
+            pluginsDir.listFiles { file ->
+                file.isFile &&
+                        file.extension == "jar" &&
+                        file.name.startsWith("${project.name}-")
+            }?.forEach { oldPluginJar ->
+                if (oldPluginJar.name != shadowJar.name && oldPluginJar.delete()) {
+                    println("Removed old plugin JAR: ${oldPluginJar.absolutePath}")
+                }
+            }
+
             val targetFile = File(pluginsDir, shadowJar.name)
             shadowJar.copyTo(targetFile, overwrite = true)
             println("Plugin copied to: ${targetFile.absolutePath}")

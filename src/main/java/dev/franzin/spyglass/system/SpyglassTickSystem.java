@@ -11,7 +11,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -39,7 +38,7 @@ public class SpyglassTickSystem extends EntityTickingSystem<EntityStore> {
             @Nonnull Store<EntityStore> store,
             @Nonnull CommandBuffer<EntityStore> commandBuffer
     ) {
-        Player player = EntityUtils.toHolder(index, archetypeChunk).getComponent(Player.getComponentType());
+        Player player = archetypeChunk.getComponent(index, Player.getComponentType());
         if (player == null) {
             return;
         }
@@ -66,7 +65,7 @@ public class SpyglassTickSystem extends EntityTickingSystem<EntityStore> {
     }
 
     public boolean isSpyglassStillEquipped(Player player) {
-        var item = player.getInventory().getItemInHand();
+        var item = player.getInventory().getActiveHotbarItem();
         return item != null && item.getItemId().equals(Spyglass.SPYGLASS_ITEM_ID);
     }
 
