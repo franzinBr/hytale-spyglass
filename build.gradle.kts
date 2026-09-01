@@ -36,7 +36,7 @@ dependencies {
     implementation("org.jetbrains:annotations:24.1.0")
 
     // Test dependencies
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
     testCompileOnly("com.hypixel.hytale:Server:$hytaleVersion")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.0")
     testRuntimeOnly("com.hypixel.hytale:Server:$hytaleVersion")
