@@ -30,6 +30,9 @@ public final class ConfigValidator {
             positiveFinite("Zoom.MagnificationLevels[" + index + "]", levels[index]);
         if (zoom.transitionDurationMillis() < 0 || zoom.transitionDurationMillis() > 10_000)
             fail("Zoom.TransitionDurationMillis must be between 0 and 10000");
+        if (!Float.isFinite(zoom.minimumControlMultiplier())
+                || zoom.minimumControlMultiplier() <= 0.0f || zoom.minimumControlMultiplier() > 1.0f)
+            fail("Zoom.MinimumControlMultiplier must be finite and between zero (exclusive) and one (inclusive)");
         if (config.drops() == null) fail("Drops must be an object");
         if (config.drops().skeletonPirates() == null) fail("Drops.SkeletonPirates must be an object");
         SkeletonPirateDropSettings pirates = config.drops().skeletonPirates();

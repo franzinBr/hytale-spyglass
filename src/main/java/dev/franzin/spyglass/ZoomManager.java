@@ -1,6 +1,8 @@
 package dev.franzin.spyglass;
 
 import com.hypixel.hytale.protocol.ClientCameraView;
+import com.hypixel.hytale.protocol.ApplyLookType;
+import com.hypixel.hytale.protocol.ApplyMovementType;
 import com.hypixel.hytale.protocol.ServerCameraSettings;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.camera.SetServerCamera;
@@ -22,6 +24,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
+import org.joml.Vector2f;
+import org.joml.Vector3f;
 
 /** Owns the persistent, per-player native-FOV zoom state. */
 public final class ZoomManager {
@@ -102,7 +106,7 @@ public final class ZoomManager {
 
         long duration = settings.transitionDurationMillis();
         if (duration == 0) {
-            sendCameraPacket(state.playerRef, targetFov);
+            sendCameraPacket(state.playerRef, targetFov, controlMultiplier(targetFov));
             return;
         }
 
@@ -114,8 +118,8 @@ public final class ZoomManager {
                 if (zoomStates.get(playerId) == state && state.transitionId == transitionId) {
                     float progress = (float) scheduledStep / steps;
                     float easedProgress = progress * progress * (3.0f - 2.0f * progress);
-                    sendCameraPacket(state.playerRef,
-                            sourceFov + (targetFov - sourceFov) * easedProgress);
+                    float interpolatedFov = sourceFov + (targetFov - sourceFov) * easedProgress;
+                    sendCameraPacket(state.playerRef, interpolatedFov, controlMultiplier(interpolatedFov));
                 }
                 return null;
             };
@@ -126,15 +130,32 @@ public final class ZoomManager {
         debug("Applied zoom level " + state.levelIndex + " (FOV " + targetFov + ") for " + playerId);
     }
 
-    private void sendCameraPacket(PlayerRef playerRef, float fov) {
+    private float controlMultiplier(float fov) {
+        return settings.scaleControlsWithZoom()
+                ? calculateControlMultiplier(settings.referenceFov(), fov, settings.minimumControlMultiplier())
+                : 1.0f;
+    }
+
+    private void sendCameraPacket(PlayerRef playerRef, float fov, float controlMultiplier) {
+        ServerCameraSettings settings = buildCameraSettings(
+                fov, controlMultiplier, this.settings.hideHeldItem(), this.settings.displayReticle());
+        playerRef.getPacketHandler().writeNoCache(new SetServerCamera(ClientCameraView.Custom, false, settings));
+    }
+
+    static ServerCameraSettings buildCameraSettings(
+            float fov, float controlMultiplier, boolean hideHeldItem, boolean displayReticle) {
         ServerCameraSettings settings = new ServerCameraSettings();
         settings.isFirstPerson = true;
-        settings.hideHeldItem = this.settings.hideHeldItem();
-        settings.displayReticle = this.settings.displayReticle();
+        settings.hideHeldItem = hideHeldItem;
+        settings.displayReticle = displayReticle;
         settings.sendMouseMotion = true;
         settings.eyeOffset = true;
         settings.baseFov = fov;
-        playerRef.getPacketHandler().writeNoCache(new SetServerCamera(ClientCameraView.Custom, false, settings));
+        settings.applyMovementType = ApplyMovementType.CharacterController;
+        settings.movementMultiplier = new Vector3f(controlMultiplier, controlMultiplier, controlMultiplier);
+        settings.applyLookType = ApplyLookType.LocalPlayerLookOrientation;
+        settings.lookMultiplier = new Vector2f(controlMultiplier, controlMultiplier);
+        return settings;
     }
 
     private void resetCamera(PlayerRef playerRef) {
@@ -162,6 +183,15 @@ public final class ZoomManager {
                 || reference <= 0.0f || minimum <= 0.0f || maximum <= 0.0f || minimum > maximum)
             throw new IllegalArgumentException("Invalid FOV configuration");
         return Math.clamp(reference / magnification, minimum, maximum);
+    }
+
+    public static float calculateControlMultiplier(float referenceFov, float targetFov, float minimumMultiplier) {
+        if (!Float.isFinite(referenceFov) || !Float.isFinite(targetFov)
+                || referenceFov <= 0.0f || targetFov <= 0.0f)
+            throw new IllegalArgumentException("FOV values must be finite and greater than zero");
+        if (!Float.isFinite(minimumMultiplier) || minimumMultiplier <= 0.0f || minimumMultiplier > 1.0f)
+            throw new IllegalArgumentException("Minimum multiplier must be finite and in (0, 1]");
+        return Math.clamp(targetFov / referenceFov, minimumMultiplier, 1.0f);
     }
 
     private void debug(String message) { log(Level.FINE, message, null); }
