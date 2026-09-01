@@ -145,25 +145,36 @@ jobs:
 
           release_json="$(gh api "repos/$GH_REPO/releases/tags/$TAG" 2>/dev/null || true)"
           if [[ -n "$release_json" ]]; then
-            published_assets="$(mktemp -d)"
-            gh release download "$TAG" --pattern "Spyglass-$VERSION.jar*" --dir "$published_assets"
-            cmp --silent "$checksum_file" "$published_assets/Spyglass-$VERSION.jar.sha256" || {
-              echo "The published GitHub Release has a different checksum; refusing to replace it." >&2
-              exit 1
-            }
-            (cd "$published_assets" && sha256sum --check "Spyglass-$VERSION.jar.sha256")
-            printf '### Release already complete\n\n- GitHub: %s\n- SHA-256: `%s`\n' \
-              "$(jq -r '.html_url' <<< "$release_json")" "$checksum" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
+            for asset in "$jar" "$checksum_file"; do
+              name="$(basename "$asset")"
+              asset_id="$(jq -r --arg name "$name" '.assets[] | select(.name == $name) | .id' <<< "$release_json")"
+              if [[ -n "$asset_id" ]]; then
+                existing="$(mktemp)"
+                gh api -H 'Accept: application/octet-stream' \
+                  "repos/$GH_REPO/releases/assets/$asset_id" > "$existing"
+                cmp --silent "$asset" "$existing" || {
+                  echo "GitHub Release asset $name already exists with different contents; refusing to overwrite it." >&2
+                  exit 1
+                }
+              else
+                gh release upload "$TAG" "$asset"
+              fi
+            done
+          else
+            # With assets passed to `gh release create`, the CLI creates an
+            # internal draft, uploads every asset, and only then publishes it.
+            gh release create "$TAG" "$jar" "$checksum_file" \
+              --verify-tag \
+              --generate-notes \
+              --title "Spyglass $VERSION"
           fi
 
-          # With assets passed to `gh release create`, the CLI creates an
-          # internal draft, uploads every asset, and only then publishes it.
-          # This avoids having to discover or update an externally visible draft.
-          gh release create "$TAG" "$jar" "$checksum_file" \
-            --verify-tag \
-            --generate-notes \
-            --title "Spyglass $VERSION"
+          verified_assets="$(mktemp -d)"
+          gh release download "$TAG" --pattern "Spyglass-$VERSION.jar*" --dir "$verified_assets"
+          cmp --silent "$jar" "$verified_assets/Spyglass-$VERSION.jar"
+          cmp --silent "$checksum_file" "$verified_assets/Spyglass-$VERSION.jar.sha256"
+          (cd "$verified_assets" && sha256sum --check "Spyglass-$VERSION.jar.sha256")
+
           release_url="$(gh release view "$TAG" --json url --jq .url)"
           printf '### Published release\n\n- GitHub: %s\n- JAR: `Spyglass-%s.jar`\n- SHA-256: `%s`\n' \
             "$release_url" "$VERSION" "$checksum" >> "$GITHUB_STEP_SUMMARY"
