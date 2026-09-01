@@ -11,6 +11,10 @@ import com.hypixel.hytale.server.core.event.events.player.DrainPlayerFromWorldEv
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.util.Config;
+import dev.franzin.spyglass.config.ConfigValidator;
+import dev.franzin.spyglass.config.SpyglassConfig;
+import dev.franzin.spyglass.config.ZoomSettings;
 import dev.franzin.spyglass.interaction.SpyglassStepZoomInteraction;
 import dev.franzin.spyglass.interaction.SpyglassZoomInteraction;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -20,10 +24,14 @@ import dev.franzin.spyglass.system.SpyglassRespawnSystem;
 
 import javax.annotation.Nonnull;
 import java.util.logging.Level;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class Spyglass extends JavaPlugin {
 
     private static Spyglass instance;
+    private final Config<SpyglassConfig> config;
+    private ZoomManager zoomManager;
 
     public static final String NAMESPACE = "Spyglass";
     public static final String SPYGLASS_ITEM_ID = "Spyglass";
@@ -33,10 +41,19 @@ public class Spyglass extends JavaPlugin {
     public Spyglass(@Nonnull JavaPluginInit init) {
         super(init);
         instance = this;
+        config = withConfig(SpyglassConfig.CODEC);
     }
 
     @Override
     protected void setup() {
+        Path configPath = getDataDirectory().resolve("config.json");
+        boolean firstStartup = Files.notExists(configPath);
+        ZoomSettings settings = ConfigValidator.validateAndSnapshot(config.get());
+        if (firstStartup) config.save().join();
+        zoomManager = new ZoomManager(this, settings);
+        log("Loaded Spyglass zoom config: " + settings.magnificationLevels().length + " levels, FOV "
+                + settings.minimumFov() + ".." + settings.maximumFov() + ", transition "
+                + settings.transitionDurationMillis() + " ms");
         log("Registering plugin...");
 
         this.getCodecRegistry(Interaction.CODEC).register(
@@ -52,19 +69,19 @@ public class Spyglass extends JavaPlugin {
         );
 
 
-        getEntityStoreRegistry().registerSystem(new SpyglassActiveSlotChangedSystem());
-        getEntityStoreRegistry().registerSystem(new SpyglassHotbarChangedSystem());
-        getEntityStoreRegistry().registerSystem(new SpyglassRespawnSystem());
+        getEntityStoreRegistry().registerSystem(new SpyglassActiveSlotChangedSystem(zoomManager));
+        getEntityStoreRegistry().registerSystem(new SpyglassHotbarChangedSystem(zoomManager));
+        getEntityStoreRegistry().registerSystem(new SpyglassRespawnSystem(zoomManager));
 
         getEventRegistry().registerGlobal(
                 PlayerDisconnectEvent.class,
-                event -> ZoomManager.getInstance().disableZoom(event.getPlayerRef().getUuid(), "player disconnected")
+                event -> zoomManager.disableZoom(event.getPlayerRef().getUuid(), "player disconnected")
         );
 
         getEventRegistry().registerGlobal(DrainPlayerFromWorldEvent.class, event -> {
             PlayerRef playerRef = event.getHolder().getComponent(PlayerRef.getComponentType());
             if (playerRef != null) {
-                ZoomManager.getInstance().disableZoom(playerRef.getUuid(), "player changed world");
+                zoomManager.disableZoom(playerRef.getUuid(), "player changed world");
             }
         });
 
@@ -78,7 +95,9 @@ public class Spyglass extends JavaPlugin {
 
     @Override
     public void shutdown() {
-        ZoomManager.getInstance().disableAll();
+        if (zoomManager != null) zoomManager.disableAll();
+        zoomManager = null;
+        instance = null;
         log("Plugin disabled!");
     }
 
@@ -88,5 +107,10 @@ public class Spyglass extends JavaPlugin {
 
     public static Spyglass getInstance() {
         return instance;
+    }
+
+    public ZoomManager getZoomManager() {
+        if (zoomManager == null) throw new IllegalStateException("Spyglass has not completed setup");
+        return zoomManager;
     }
 }

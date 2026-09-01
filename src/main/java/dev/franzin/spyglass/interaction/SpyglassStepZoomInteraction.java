@@ -11,7 +11,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import dev.franzin.spyglass.ZoomManager;
+import dev.franzin.spyglass.Spyglass;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
@@ -50,7 +50,7 @@ public class SpyglassStepZoomInteraction extends SimpleInstantInteraction {
         }
         UUID playerId = component.getUuid();
 
-        if (!ZoomManager.getInstance().stepZoom(playerId)) {
+        if (!Spyglass.getInstance().getZoomManager().stepZoom(playerId)) {
             context.getState().state = InteractionState.Failed;
         }
     }

@@ -35,6 +35,7 @@ dependencies {
 
     // Test dependencies
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testCompileOnly("com.hypixel.hytale:Server:0.6.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.0")
     testRuntimeOnly("com.hypixel.hytale:Server:0.6.3")
 }

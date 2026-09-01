@@ -16,7 +16,7 @@ import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import dev.franzin.spyglass.ZoomManager;
+import dev.franzin.spyglass.Spyglass;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
@@ -66,6 +66,6 @@ public class SpyglassZoomInteraction extends SimpleInstantInteraction {
         UUID playerId = uuidComponent.getUuid();
 
 
-        ZoomManager.getInstance().toggleZoom(playerId, player, playerRef);
+        Spyglass.getInstance().getZoomManager().toggleZoom(playerId, player, playerRef);
     }
 }

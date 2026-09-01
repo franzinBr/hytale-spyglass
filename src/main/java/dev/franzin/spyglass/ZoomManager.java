@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import dev.franzin.spyglass.ui.Spyglass_Overlay;
 import dev.franzin.spyglass.ui.hudmanager.UIManager;
+import dev.franzin.spyglass.config.ZoomSettings;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -24,20 +25,25 @@ import java.util.logging.Level;
 
 /** Owns the persistent, per-player native-FOV zoom state. */
 public final class ZoomManager {
-    private static final ZoomManager INSTANCE = new ZoomManager();
+    private static final int TRANSITION_STEPS = 7;
     private static final String OVERLAY_ID = "spyglass-overlay";
     private final Map<UUID, ZoomState> zoomStates = new ConcurrentHashMap<>();
+    private final Spyglass plugin;
+    private final ZoomSettings settings;
+    private final float[] magnificationLevels;
 
-    private ZoomManager() {}
-
-    public static ZoomManager getInstance() { return INSTANCE; }
+    public ZoomManager(@Nonnull Spyglass plugin, @Nonnull ZoomSettings settings) {
+        this.plugin = plugin;
+        this.settings = settings.snapshot();
+        this.magnificationLevels = this.settings.magnificationLevels();
+    }
 
     public boolean toggleZoom(@Nonnull UUID playerId, @Nonnull Player player, @Nonnull PlayerRef playerRef) {
         if (isZooming(playerId)) {
             disableZoom(playerId, "toggle");
             return false;
         }
-        ZoomState state = new ZoomState(player, playerRef, 0, ZoomConfig.REFERENCE_FOV);
+        ZoomState state = new ZoomState(player, playerRef, 0, settings.referenceFov());
         zoomStates.put(playerId, state);
         try {
             applyLevel(playerId, state);
@@ -55,7 +61,7 @@ public final class ZoomManager {
     public boolean stepZoom(@Nonnull UUID playerId) {
         ZoomState state = zoomStates.get(playerId);
         if (state == null) return false;
-        state.levelIndex = (state.levelIndex + 1) % ZoomConfig.levelCount();
+        state.levelIndex = (state.levelIndex + 1) % magnificationLevels.length;
         applyLevel(playerId, state);
         playSound(state.playerRef, "SFX_Spyglass_Open");
         return true;
@@ -88,16 +94,25 @@ public final class ZoomManager {
     }
 
     private void applyLevel(UUID playerId, ZoomState state) {
-        float targetFov = ZoomConfig.fovForLevel(state.levelIndex);
+        float targetFov = calculateFov(settings.referenceFov(), magnificationLevels[state.levelIndex],
+                settings.minimumFov(), settings.maximumFov());
         float sourceFov = state.currentFov;
         int transitionId = ++state.transitionId;
         state.currentFov = targetFov;
 
-        for (int step = 1; step <= ZoomConfig.TRANSITION_STEPS; step++) {
+        long duration = settings.transitionDurationMillis();
+        if (duration == 0) {
+            sendCameraPacket(state.playerRef, targetFov);
+            return;
+        }
+
+        int steps = (int) Math.min(TRANSITION_STEPS, duration);
+
+        for (int step = 1; step <= steps; step++) {
             final int scheduledStep = step;
             Callable<Void> update = () -> {
                 if (zoomStates.get(playerId) == state && state.transitionId == transitionId) {
-                    float progress = (float) scheduledStep / ZoomConfig.TRANSITION_STEPS;
+                    float progress = (float) scheduledStep / steps;
                     float easedProgress = progress * progress * (3.0f - 2.0f * progress);
                     sendCameraPacket(state.playerRef,
                             sourceFov + (targetFov - sourceFov) * easedProgress);
@@ -105,8 +120,8 @@ public final class ZoomManager {
                 return null;
             };
             ScheduledFuture<Void> task = HytaleServer.SCHEDULED_EXECUTOR.schedule(
-                    update, (long) (step - 1) * ZoomConfig.TRANSITION_STEP_MILLIS, TimeUnit.MILLISECONDS);
-            Spyglass.getInstance().getTaskRegistry().registerTask(task);
+                    update, Math.round((double) scheduledStep * duration / steps), TimeUnit.MILLISECONDS);
+            plugin.getTaskRegistry().registerTask(task);
         }
         debug("Applied zoom level " + state.levelIndex + " (FOV " + targetFov + ") for " + playerId);
     }
@@ -114,8 +129,8 @@ public final class ZoomManager {
     private void sendCameraPacket(PlayerRef playerRef, float fov) {
         ServerCameraSettings settings = new ServerCameraSettings();
         settings.isFirstPerson = true;
-        settings.hideHeldItem = ZoomConfig.HIDE_HELD_ITEM;
-        settings.displayReticle = true;
+        settings.hideHeldItem = this.settings.hideHeldItem();
+        settings.displayReticle = this.settings.displayReticle();
         settings.sendMouseMotion = true;
         settings.eyeOffset = true;
         settings.baseFov = fov;
@@ -140,11 +155,20 @@ public final class ZoomManager {
         SoundUtil.playSoundEvent2dToPlayer(playerRef, SoundEvent.getAssetMap().getIndex(id), SoundCategory.SFX);
     }
 
-    private static void debug(String message) { log(Level.FINE, message, null); }
+    public static float calculateFov(float reference, float magnification, float minimum, float maximum) {
+        if (!Float.isFinite(magnification) || magnification <= 0.0f)
+            throw new IllegalArgumentException("Magnification must be finite and greater than zero");
+        if (!Float.isFinite(reference) || !Float.isFinite(minimum) || !Float.isFinite(maximum)
+                || reference <= 0.0f || minimum <= 0.0f || maximum <= 0.0f || minimum > maximum)
+            throw new IllegalArgumentException("Invalid FOV configuration");
+        return Math.clamp(reference / magnification, minimum, maximum);
+    }
 
-    private static void log(Level level, String message, Throwable exception) {
-        if (exception == null) Spyglass.getInstance().getLogger().at(level).log(message);
-        else Spyglass.getInstance().getLogger().at(level).withCause(exception).log(message);
+    private void debug(String message) { log(Level.FINE, message, null); }
+
+    private void log(Level level, String message, Throwable exception) {
+        if (exception == null) plugin.getLogger().at(level).log(message);
+        else plugin.getLogger().at(level).withCause(exception).log(message);
     }
 
     private static final class ZoomState {
@@ -161,33 +185,4 @@ public final class ZoomManager {
         }
     }
 
-    public static final class ZoomConfig {
-        static final float REFERENCE_FOV = 70.0f;
-        static final float MINIMUM_FOV = 10.0f;
-        static final float MAXIMUM_FOV = 70.0f;
-        static final boolean HIDE_HELD_ITEM = true;
-        static final int TRANSITION_STEPS = 7;
-        static final long TRANSITION_STEP_MILLIS = 40L;
-        private static final float[] MAGNIFICATION_LEVELS = validateLevels(2.0f, 3.0f, 6.0f);
-        private ZoomConfig() {}
-        static int levelCount() { return MAGNIFICATION_LEVELS.length; }
-        public static float calculateFov(float reference, float magnification, float minimum, float maximum) {
-            if (!Float.isFinite(magnification) || magnification <= 0.0f)
-                throw new IllegalArgumentException("Magnification must be finite and greater than zero");
-            if (!Float.isFinite(reference) || !Float.isFinite(minimum) || !Float.isFinite(maximum) || minimum > maximum)
-                throw new IllegalArgumentException("Invalid FOV configuration");
-            return Math.clamp(reference / magnification, minimum, maximum);
-        }
-        static float fovForLevel(int index) {
-            return calculateFov(REFERENCE_FOV, MAGNIFICATION_LEVELS[index], MINIMUM_FOV, MAXIMUM_FOV);
-        }
-        static float[] validateLevels(float... levels) {
-            if (levels == null || levels.length == 0)
-                throw new IllegalArgumentException("At least one magnification level is required");
-            float[] copy = levels.clone();
-            for (float level : copy) if (!Float.isFinite(level) || level <= 0.0f)
-                throw new IllegalArgumentException("Magnification levels must be finite and greater than zero");
-            return copy;
-        }
-    }
 }

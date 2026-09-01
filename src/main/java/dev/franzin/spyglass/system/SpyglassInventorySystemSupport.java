@@ -12,13 +12,13 @@ import dev.franzin.spyglass.ZoomManager;
 
 final class SpyglassInventorySystemSupport {
     private SpyglassInventorySystemSupport() {}
-    static void disableIfSpyglassIsNotActive(int index, ArchetypeChunk<EntityStore> chunk,
+    static void disableIfSpyglassIsNotActive(ZoomManager zoomManager, int index, ArchetypeChunk<EntityStore> chunk,
                                               CommandBuffer<EntityStore> commandBuffer, String reason) {
         Player player = chunk.getComponent(index, Player.getComponentType());
         PlayerRef playerRef = player == null ? null : chunk.getComponent(index, PlayerRef.getComponentType());
-        if (playerRef == null || !ZoomManager.getInstance().isZooming(playerRef.getUuid())) return;
+        if (playerRef == null || !zoomManager.isZooming(playerRef.getUuid())) return;
         ItemStack item = InventoryComponent.getItemInHand(commandBuffer, chunk.getReferenceTo(index));
         if (ItemStack.isEmpty(item) || !Spyglass.SPYGLASS_ITEM_ID.equals(item.getItemId()))
-            ZoomManager.getInstance().disableZoom(playerRef.getUuid(), reason);
+            zoomManager.disableZoom(playerRef.getUuid(), reason);
     }
 }
