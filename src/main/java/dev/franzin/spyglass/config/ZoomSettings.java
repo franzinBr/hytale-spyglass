@@ -14,6 +14,8 @@ public final class ZoomSettings {
             .addField(new KeyedCodec<>("TransitionDurationMillis", Codec.LONG), ZoomSettings::setTransitionDurationMillis, ZoomSettings::transitionDurationMillis)
             .addField(new KeyedCodec<>("HideHeldItem", Codec.BOOLEAN), ZoomSettings::setHideHeldItem, ZoomSettings::hideHeldItem)
             .addField(new KeyedCodec<>("DisplayReticle", Codec.BOOLEAN), ZoomSettings::setDisplayReticle, ZoomSettings::displayReticle)
+            .addField(new KeyedCodec<>("ScaleControlsWithZoom", Codec.BOOLEAN), ZoomSettings::setScaleControlsWithZoom, ZoomSettings::scaleControlsWithZoom)
+            .addField(new KeyedCodec<>("MinimumControlMultiplier", Codec.FLOAT), ZoomSettings::setMinimumControlMultiplier, ZoomSettings::minimumControlMultiplier)
             .build();
 
     private float referenceFov = 70.0f;
@@ -23,6 +25,8 @@ public final class ZoomSettings {
     private long transitionDurationMillis = 240L;
     private boolean hideHeldItem = true;
     private boolean displayReticle = true;
+    private boolean scaleControlsWithZoom = true;
+    private float minimumControlMultiplier = 0.1f;
 
     public ZoomSettings() {}
 
@@ -34,6 +38,8 @@ public final class ZoomSettings {
         transitionDurationMillis = source.transitionDurationMillis;
         hideHeldItem = source.hideHeldItem;
         displayReticle = source.displayReticle;
+        scaleControlsWithZoom = source.scaleControlsWithZoom;
+        minimumControlMultiplier = source.minimumControlMultiplier;
     }
 
     public ZoomSettings snapshot() { return new ZoomSettings(this); }
@@ -44,6 +50,8 @@ public final class ZoomSettings {
     public long transitionDurationMillis() { return transitionDurationMillis; }
     public boolean hideHeldItem() { return hideHeldItem; }
     public boolean displayReticle() { return displayReticle; }
+    public boolean scaleControlsWithZoom() { return scaleControlsWithZoom; }
+    public float minimumControlMultiplier() { return minimumControlMultiplier; }
 
     void setReferenceFov(float value) { referenceFov = value; }
     void setMagnificationLevels(float[] value) { magnificationLevels = value == null ? null : value.clone(); }
@@ -52,4 +60,6 @@ public final class ZoomSettings {
     void setTransitionDurationMillis(long value) { transitionDurationMillis = value; }
     void setHideHeldItem(boolean value) { hideHeldItem = value; }
     void setDisplayReticle(boolean value) { displayReticle = value; }
+    void setScaleControlsWithZoom(boolean value) { scaleControlsWithZoom = value; }
+    void setMinimumControlMultiplier(float value) { minimumControlMultiplier = value; }
 }

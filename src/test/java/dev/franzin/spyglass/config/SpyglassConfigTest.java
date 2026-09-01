@@ -22,6 +22,8 @@ class SpyglassConfigTest {
         assertEquals(240L, zoom.transitionDurationMillis());
         assertTrue(zoom.hideHeldItem());
         assertTrue(zoom.displayReticle());
+        assertTrue(zoom.scaleControlsWithZoom());
+        assertEquals(0.1f, zoom.minimumControlMultiplier());
         assertEquals(8.0f, snapshot.skeletonPirates().captainChancePercent());
         assertEquals(4.0f, snapshot.skeletonPirates().gunnerChancePercent());
         assertEquals(2.0f, snapshot.skeletonPirates().strikerChancePercent());
@@ -36,12 +38,16 @@ class SpyglassConfigTest {
                 .append("TransitionDurationMillis", new BsonInt64(0))
                 .append("HideHeldItem", BsonBoolean.FALSE)
                 .append("DisplayReticle", BsonBoolean.FALSE);
+        zoom.append("ScaleControlsWithZoom", BsonBoolean.FALSE)
+                .append("MinimumControlMultiplier", new BsonDouble(0.25));
         ZoomSettings decoded = ConfigValidator.validateAndSnapshot(
                 SpyglassConfig.CODEC.decode(new BsonDocument("Zoom", zoom))).zoom();
         assertArrayEquals(new float[] {4, 2}, decoded.magnificationLevels());
         assertEquals(0, decoded.transitionDurationMillis());
         assertFalse(decoded.hideHeldItem());
         assertFalse(decoded.displayReticle());
+        assertFalse(decoded.scaleControlsWithZoom());
+        assertEquals(0.25f, decoded.minimumControlMultiplier());
     }
 
     @Test void omittedFieldKeepsItsDefault() {
@@ -49,6 +55,8 @@ class SpyglassConfigTest {
                 new BsonDocument("MinimumFov", new BsonDouble(12))));
         assertEquals(12, decoded.zoom().minimumFov());
         assertEquals(70, decoded.zoom().referenceFov());
+        assertTrue(decoded.zoom().scaleControlsWithZoom());
+        assertEquals(0.1f, decoded.zoom().minimumControlMultiplier());
     }
 
     @Test void snapshotAndGettersDefensivelyCopyLevels() {
@@ -107,6 +115,9 @@ class SpyglassConfigTest {
         config = new SpyglassConfig(); config.zoom().setReferenceFov(0); assertInvalid(config, "Zoom.ReferenceFov");
         config = new SpyglassConfig(); config.zoom().setMinimumFov(80); assertInvalid(config, "Zoom.MaximumFov");
         config = new SpyglassConfig(); config.zoom().setTransitionDurationMillis(10_001); assertInvalid(config, "Zoom.TransitionDurationMillis");
+        config = new SpyglassConfig(); config.zoom().setMinimumControlMultiplier(0); assertInvalid(config, "Zoom.MinimumControlMultiplier");
+        config = new SpyglassConfig(); config.zoom().setMinimumControlMultiplier(1.01f); assertInvalid(config, "Zoom.MinimumControlMultiplier");
+        config = new SpyglassConfig(); config.zoom().setMinimumControlMultiplier(Float.NaN); assertInvalid(config, "Zoom.MinimumControlMultiplier");
     }
 
     private static void assertInvalid(SpyglassConfig config, String path) {
