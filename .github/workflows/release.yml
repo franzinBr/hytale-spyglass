@@ -143,11 +143,13 @@ jobs:
           checksum_file="$jar.sha256"
           checksum="$(cut -d ' ' -f1 "$checksum_file")"
 
-          release_json="$(gh api "repos/$GH_REPO/releases/tags/$TAG" 2>/dev/null || true)"
+          if ! release_json="$(gh api "repos/$GH_REPO/releases/tags/$TAG" 2>/dev/null)"; then
+            release_json=""
+          fi
           if [[ -n "$release_json" ]]; then
             for asset in "$jar" "$checksum_file"; do
               name="$(basename "$asset")"
-              asset_id="$(jq -r --arg name "$name" '.assets[] | select(.name == $name) | .id' <<< "$release_json")"
+              asset_id="$(jq -r --arg name "$name" '(.assets // [])[] | select(.name == $name) | .id' <<< "$release_json")"
               if [[ -n "$asset_id" ]]; then
                 existing="$(mktemp)"
                 gh api -H 'Accept: application/octet-stream' \
