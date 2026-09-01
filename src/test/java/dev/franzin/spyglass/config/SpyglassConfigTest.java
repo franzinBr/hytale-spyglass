@@ -13,7 +13,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class SpyglassConfigTest {
     @Test void defaultsMatchExistingBehavior() {
-        ZoomSettings zoom = ConfigValidator.validateAndSnapshot(new SpyglassConfig());
+        ConfigValidator.Snapshot snapshot = ConfigValidator.validateAndSnapshot(new SpyglassConfig());
+        ZoomSettings zoom = snapshot.zoom();
         assertEquals(70.0f, zoom.referenceFov());
         assertArrayEquals(new float[] {2, 3, 6}, zoom.magnificationLevels());
         assertEquals(10.0f, zoom.minimumFov());
@@ -21,6 +22,9 @@ class SpyglassConfigTest {
         assertEquals(240L, zoom.transitionDurationMillis());
         assertTrue(zoom.hideHeldItem());
         assertTrue(zoom.displayReticle());
+        assertEquals(8.0f, snapshot.skeletonPirates().captainChancePercent());
+        assertEquals(4.0f, snapshot.skeletonPirates().gunnerChancePercent());
+        assertEquals(2.0f, snapshot.skeletonPirates().strikerChancePercent());
     }
 
     @Test void codecPreservesCompleteConfigurationAndOrder() {
@@ -33,7 +37,7 @@ class SpyglassConfigTest {
                 .append("HideHeldItem", BsonBoolean.FALSE)
                 .append("DisplayReticle", BsonBoolean.FALSE);
         ZoomSettings decoded = ConfigValidator.validateAndSnapshot(
-                SpyglassConfig.CODEC.decode(new BsonDocument("Zoom", zoom)));
+                SpyglassConfig.CODEC.decode(new BsonDocument("Zoom", zoom))).zoom();
         assertArrayEquals(new float[] {4, 2}, decoded.magnificationLevels());
         assertEquals(0, decoded.transitionDurationMillis());
         assertFalse(decoded.hideHeldItem());
@@ -51,11 +55,49 @@ class SpyglassConfigTest {
         SpyglassConfig config = new SpyglassConfig();
         float[] source = {2, 4};
         config.zoom().setMagnificationLevels(source);
-        ZoomSettings snapshot = ConfigValidator.validateAndSnapshot(config);
+        ZoomSettings snapshot = ConfigValidator.validateAndSnapshot(config).zoom();
         source[0] = 99;
         float[] returned = snapshot.magnificationLevels();
         returned[0] = 88;
         assertArrayEquals(new float[] {2, 4}, snapshot.magnificationLevels());
+    }
+
+    @Test void oldZoomOnlyConfigReceivesDropDefaults() {
+        SpyglassConfig decoded = SpyglassConfig.CODEC.decode(new BsonDocument("Zoom",
+                new BsonDocument("ReferenceFov", new BsonDouble(65))));
+        ConfigValidator.Snapshot snapshot = ConfigValidator.validateAndSnapshot(decoded);
+        assertEquals(65, snapshot.zoom().referenceFov());
+        assertEquals(8, snapshot.skeletonPirates().captainChancePercent());
+        assertEquals(4, snapshot.skeletonPirates().gunnerChancePercent());
+        assertEquals(2, snapshot.skeletonPirates().strikerChancePercent());
+    }
+
+    @Test void omittedDropFieldKeepsOnlyItsDefault() {
+        BsonDocument pirates = new BsonDocument("CaptainChancePercent", new BsonDouble(12));
+        BsonDocument drops = new BsonDocument("SkeletonPirates", pirates);
+        ConfigValidator.Snapshot snapshot = ConfigValidator.validateAndSnapshot(
+                SpyglassConfig.CODEC.decode(new BsonDocument("Drops", drops)));
+        assertEquals(12, snapshot.skeletonPirates().captainChancePercent());
+        assertEquals(4, snapshot.skeletonPirates().gunnerChancePercent());
+        assertEquals(2, snapshot.skeletonPirates().strikerChancePercent());
+    }
+
+    @Test void acceptsDropBoundaryValuesAndRejectsInvalidPercentages() {
+        SpyglassConfig config = new SpyglassConfig();
+        config.drops().skeletonPirates().setCaptainChancePercent(0);
+        config.drops().skeletonPirates().setGunnerChancePercent(100);
+        ConfigValidator.validate(config);
+
+        config.drops().skeletonPirates().setCaptainChancePercent(-1);
+        assertInvalid(config, "Drops.SkeletonPirates.CaptainChancePercent");
+        config = new SpyglassConfig();
+        config.drops().skeletonPirates().setGunnerChancePercent(101);
+        assertInvalid(config, "Drops.SkeletonPirates.GunnerChancePercent");
+        config = new SpyglassConfig();
+        config.drops().skeletonPirates().setStrikerChancePercent(Float.NaN);
+        assertInvalid(config, "Drops.SkeletonPirates.StrikerChancePercent");
+        config.drops().skeletonPirates().setStrikerChancePercent(Float.POSITIVE_INFINITY);
+        assertInvalid(config, "Drops.SkeletonPirates.StrikerChancePercent");
     }
 
     @Test void rejectsInvalidFieldsWithTheirPaths() {

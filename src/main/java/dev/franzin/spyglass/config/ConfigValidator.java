@@ -11,9 +11,9 @@ public final class ConfigValidator {
         catch (IllegalArgumentException exception) { results.fail(exception.getMessage()); }
     }
 
-    public static ZoomSettings validateAndSnapshot(SpyglassConfig config) {
+    public static Snapshot validateAndSnapshot(SpyglassConfig config) {
         validate(config);
-        return config.zoom().snapshot();
+        return new Snapshot(config.zoom().snapshot(), config.drops().skeletonPirates().snapshot());
     }
 
     public static void validate(SpyglassConfig config) {
@@ -30,11 +30,24 @@ public final class ConfigValidator {
             positiveFinite("Zoom.MagnificationLevels[" + index + "]", levels[index]);
         if (zoom.transitionDurationMillis() < 0 || zoom.transitionDurationMillis() > 10_000)
             fail("Zoom.TransitionDurationMillis must be between 0 and 10000");
+        if (config.drops() == null) fail("Drops must be an object");
+        if (config.drops().skeletonPirates() == null) fail("Drops.SkeletonPirates must be an object");
+        SkeletonPirateDropSettings pirates = config.drops().skeletonPirates();
+        percent("Drops.SkeletonPirates.CaptainChancePercent", pirates.captainChancePercent());
+        percent("Drops.SkeletonPirates.GunnerChancePercent", pirates.gunnerChancePercent());
+        percent("Drops.SkeletonPirates.StrikerChancePercent", pirates.strikerChancePercent());
     }
 
     private static void positiveFinite(String path, float value) {
         if (!Float.isFinite(value) || value <= 0.0f) fail(path + " must be finite and greater than zero");
     }
+
+    private static void percent(String path, float value) {
+        if (!Float.isFinite(value) || value < 0.0f || value > 100.0f)
+            fail(path + " must be between 0 and 100");
+    }
+
+    public record Snapshot(ZoomSettings zoom, SkeletonPirateDropSettings.Snapshot skeletonPirates) {}
 
     private static void fail(String message) { throw new IllegalArgumentException(PREFIX + message); }
 }
