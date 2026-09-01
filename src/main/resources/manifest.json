@@ -1,7 +1,7 @@
 {
   "Group": "dev.franzin",
   "Name": "Spyglass",
-  "Version": "0.4.4",
+  "Version": "${version}",
   "Description": "Adds a craftable spyglass that lets you zoom in and scout the world from afar.",
   "Authors": [
     {
@@ -12,7 +12,7 @@
   ],
   "Website": "https://github.com/franzinBr/hytale-spyglass",
   "Main": "dev.franzin.spyglass.Spyglass",
-  "ServerVersion": "=0.5.6",
+  "ServerVersion": "${hytaleVersionConstraint}",
   "Dependencies": {},
   "OptionalDependencies": {},
   "IncludesAssetPack": true,

@@ -1,0 +1,59 @@
+name: Create Release Tag
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: write
+
+concurrency:
+  group: create-release-tag
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: master
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Create tag from pluginVersion
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^pluginVersion=//p' gradle.properties)"
+          [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || {
+            echo "pluginVersion must be stable SemVer (MAJOR.MINOR.PATCH): $version" >&2
+            exit 1
+          }
+          tag="v$version"
+
+          git fetch --no-tags origin master
+          [[ "$(git rev-parse HEAD)" == "$(git rev-parse origin/master)" ]] || {
+            echo "Checked out commit is not the current origin/master; refusing to tag it." >&2
+            exit 1
+          }
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "Tag $tag already exists; use the Release recovery workflow if publication failed." >&2
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag --annotate "$tag" --message "Spyglass $version"
+          git push origin "refs/tags/$tag"
+
+          # Pushes made with GITHUB_TOKEN do not trigger other workflows, so
+          # explicitly dispatch the release workflow for the newly created tag.
+          gh workflow run release.yml --ref master --field "tag=$tag"
+
+          printf '### Release tag created\n\n- Tag: `%s`\n- Commit: `%s`\n- Release workflow dispatched: https://github.com/%s/actions/workflows/release.yml\n' \
+            "$tag" "$(git rev-parse HEAD)" "$GH_REPO" >> "$GITHUB_STEP_SUMMARY"

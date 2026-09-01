@@ -12,10 +12,11 @@ import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import dev.franzin.spyglass.ZoomManager;
+import dev.franzin.spyglass.Spyglass;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
@@ -56,14 +57,15 @@ public class SpyglassZoomInteraction extends SimpleInstantInteraction {
             return;
         }
 
-        @SuppressWarnings("removal")
-        UUID playerId = player.getUuid();
-        assert playerId != null;
+        UUIDComponent uuidComponent = commandBuffer.getComponent(entityRef, UUIDComponent.getComponentType());
+        var playerRef = commandBuffer.getComponent(entityRef, com.hypixel.hytale.server.core.universe.PlayerRef.getComponentType());
+        if (uuidComponent == null || playerRef == null) {
+            context.getState().state = InteractionState.Failed;
+            return;
+        }
+        UUID playerId = uuidComponent.getUuid();
 
-        @SuppressWarnings("removal")
-        var playerRef = player.getPlayerRef();
 
-
-        ZoomManager.getInstance().toggleZoom(playerId, player, playerRef);
+        Spyglass.getInstance().getZoomManager().toggleZoom(playerId, player, playerRef);
     }
 }
