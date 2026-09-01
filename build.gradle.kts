@@ -4,9 +4,11 @@ plugins {
     id("run-hytale")
 }
 
-group = findProperty("pluginGroup") as String? ?: "com.example"
+group = findProperty("pluginGroup") as String? ?: "dev.franzin"
 version = findProperty("pluginVersion") as String? ?: "1.0.0"
-description = findProperty("pluginDescription") as String? ?: "A Hytale plugin template"
+description = findProperty("pluginDescription") as String?
+    ?: "Adds a craftable spyglass that lets you zoom in and scout the world from afar."
+val hytaleVersion = providers.gradleProperty("hytaleVersion").get()
 
 repositories {
     mavenLocal()
@@ -28,16 +30,16 @@ repositories {
 
 dependencies {
     // Hytale Server API (provided by server at runtime)
-    compileOnly("com.hypixel.hytale:Server:0.6.3")
+    compileOnly("com.hypixel.hytale:Server:$hytaleVersion")
     // Common dependencies (will be bundled in JAR)
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("org.jetbrains:annotations:24.1.0")
 
     // Test dependencies
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
-    testCompileOnly("com.hypixel.hytale:Server:0.6.3")
+    testCompileOnly("com.hypixel.hytale:Server:$hytaleVersion")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.0")
-    testRuntimeOnly("com.hypixel.hytale:Server:0.6.3")
+    testRuntimeOnly("com.hypixel.hytale:Server:$hytaleVersion")
 }
 
 tasks {
@@ -55,7 +57,8 @@ tasks {
         val props = mapOf(
             "group" to project.group,
             "version" to project.version,
-            "description" to project.description
+            "description" to project.description,
+            "hytaleVersionConstraint" to "=$hytaleVersion"
         )
         inputs.properties(props)
 
@@ -88,7 +91,7 @@ tasks {
 }
 
 runHytale {
-    jarUrl = "https://maven.hytale.com/release/com/hypixel/hytale/Server/0.6.3/Server-0.6.3.jar"
+    jarUrl = "https://maven.hytale.com/release/com/hypixel/hytale/Server/$hytaleVersion/Server-$hytaleVersion.jar"
     assetsPath = "libs/Assets.zip"
 }
 
