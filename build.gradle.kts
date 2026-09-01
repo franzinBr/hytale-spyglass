@@ -28,14 +28,15 @@ repositories {
 
 dependencies {
     // Hytale Server API (provided by server at runtime)
-    compileOnly("com.hypixel.hytale:Server:0.5.6")
+    compileOnly("com.hypixel.hytale:Server:0.6.3")
     // Common dependencies (will be bundled in JAR)
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("org.jetbrains:annotations:24.1.0")
 
     // Test dependencies
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.0")
+    testRuntimeOnly("com.hypixel.hytale:Server:0.6.3")
 }
 
 tasks {
@@ -86,7 +87,7 @@ tasks {
 }
 
 runHytale {
-    jarUrl = "https://maven.hytale.com/release/com/hypixel/hytale/Server/0.5.6/Server-0.5.6.jar"
+    jarUrl = "https://maven.hytale.com/release/com/hypixel/hytale/Server/0.6.3/Server-0.6.3.jar"
     assetsPath = "libs/Assets.zip"
 }
 

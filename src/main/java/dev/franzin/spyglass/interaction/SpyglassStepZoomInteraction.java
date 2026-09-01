@@ -31,7 +31,7 @@ public class SpyglassStepZoomInteraction extends SimpleInstantInteraction {
         Ref<EntityStore> entityRef = context.getEntity();
         CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
 
-        if (commandBuffer == null) {
+        if (entityRef == null || commandBuffer == null) {
             context.getState().state = InteractionState.Failed;
             return;
         }
@@ -44,14 +44,14 @@ public class SpyglassStepZoomInteraction extends SimpleInstantInteraction {
         }
 
         UUIDComponent component = commandBuffer.getComponent(entityRef, UUIDComponent.getComponentType());
-        assert component != null;
-        UUID playerId = component.getUuid();
-
-        if(!ZoomManager.getInstance().isZooming(playerId)) {
+        if (component == null) {
             context.getState().state = InteractionState.Failed;
             return;
         }
+        UUID playerId = component.getUuid();
 
-        ZoomManager.getInstance().stepZoom(playerId);
+        if (!ZoomManager.getInstance().stepZoom(playerId)) {
+            context.getState().state = InteractionState.Failed;
+        }
     }
 }

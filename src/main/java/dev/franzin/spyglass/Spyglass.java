@@ -7,12 +7,16 @@
 package dev.franzin.spyglass;
 
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
+import com.hypixel.hytale.server.core.event.events.player.DrainPlayerFromWorldEvent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import dev.franzin.spyglass.interaction.SpyglassStepZoomInteraction;
 import dev.franzin.spyglass.interaction.SpyglassZoomInteraction;
-import dev.franzin.spyglass.system.SpyglassTickSystem;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import dev.franzin.spyglass.system.SpyglassActiveSlotChangedSystem;
+import dev.franzin.spyglass.system.SpyglassHotbarChangedSystem;
+import dev.franzin.spyglass.system.SpyglassRespawnSystem;
 
 import javax.annotation.Nonnull;
 import java.util.logging.Level;
@@ -48,12 +52,21 @@ public class Spyglass extends JavaPlugin {
         );
 
 
-        getEntityStoreRegistry().registerSystem(new SpyglassTickSystem());
+        getEntityStoreRegistry().registerSystem(new SpyglassActiveSlotChangedSystem());
+        getEntityStoreRegistry().registerSystem(new SpyglassHotbarChangedSystem());
+        getEntityStoreRegistry().registerSystem(new SpyglassRespawnSystem());
 
         getEventRegistry().registerGlobal(
                 PlayerDisconnectEvent.class,
-                event -> ZoomManager.getInstance().disableZoom(event.getPlayerRef().getUuid())
+                event -> ZoomManager.getInstance().disableZoom(event.getPlayerRef().getUuid(), "player disconnected")
         );
+
+        getEventRegistry().registerGlobal(DrainPlayerFromWorldEvent.class, event -> {
+            PlayerRef playerRef = event.getHolder().getComponent(PlayerRef.getComponentType());
+            if (playerRef != null) {
+                ZoomManager.getInstance().disableZoom(playerRef.getUuid(), "player changed world");
+            }
+        });
 
         log("Plugin setup complete!");
     }
@@ -65,6 +78,7 @@ public class Spyglass extends JavaPlugin {
 
     @Override
     public void shutdown() {
+        ZoomManager.getInstance().disableAll();
         log("Plugin disabled!");
     }
 
