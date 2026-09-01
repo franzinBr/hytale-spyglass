@@ -118,7 +118,6 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: curseforge-production
     permissions:
       contents: write
     steps:
@@ -132,15 +131,12 @@ jobs:
         working-directory: dist
         run: sha256sum --check "Spyglass-${{ needs.build.outputs.version }}.jar.sha256"
 
-      - name: Create draft and publish to CurseForge
+      - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.build.outputs.tag }}
           VERSION: ${{ needs.build.outputs.version }}
-          HYTALE_VERSION: ${{ needs.build.outputs.hytale-version }}
-          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
-          CURSEFORGE_GAME_VERSION_IDS: ${{ vars.CURSEFORGE_GAME_VERSION_IDS }}
         run: |
           set -euo pipefail
           jar="dist/Spyglass-$VERSION.jar"
@@ -154,7 +150,6 @@ jobs:
           fi
 
           is_draft="$(jq -r '.draft' <<< "$release_json")"
-          body="$(jq -r '.body // ""' <<< "$release_json")"
           if [[ "$is_draft" != true ]]; then
             published_assets="$(mktemp -d)"
             gh release download "$TAG" --pattern "Spyglass-$VERSION.jar*" --dir "$published_assets"
@@ -183,42 +178,7 @@ jobs:
             fi
           done
 
-          curseforge_id="$(sed -n 's/.*<!-- curseforge-file-id: \([0-9][0-9]*\) -->.*/\1/p' <<< "$body" | head -n1)"
-          if [[ -z "$curseforge_id" ]]; then
-            changelog="$body"
-            [[ -n "$changelog" ]] || changelog="Initial automated release of Spyglass $VERSION."
-            changelog="$(jq -Rn --arg text "$changelog" '$text[0:4000]')"
-            if [[ -n "$CURSEFORGE_GAME_VERSION_IDS" ]]; then
-              game_versions="$(jq -ce 'if type == "array" and all(.[]; type == "number") then . else error("IDs must be a numeric JSON array") end' <<< "$CURSEFORGE_GAME_VERSION_IDS")"
-              metadata="$(jq -cn --argjson changelog "$changelog" --arg version "$VERSION" --argjson gameVersions "$game_versions" \
-                '{changelog: $changelog, changelogType: "markdown", displayName: ("Spyglass " + $version), gameVersions: $gameVersions, releaseType: "release"}')"
-            else
-              metadata="$(jq -cn --argjson changelog "$changelog" --arg version "$VERSION" --arg hytale "$HYTALE_VERSION" \
-                '{changelog: $changelog, changelogType: "markdown", displayName: ("Spyglass " + $version), gameVersionNames: ["Server", $hytale], releaseType: "release"}')"
-            fi
-            response_file="$(mktemp)"
-            if ! curl --fail-with-body --show-error --silent \
-              -H "X-Api-Token: $CURSEFORGE_TOKEN" \
-              -F "metadata=$metadata;type=application/json" \
-              -F "file=@$jar;type=application/java-archive" \
-              -o "$response_file" \
-              https://www.curseforge.com/api/projects/1432313/upload-file; then
-              echo "CurseForge rejected the upload (a duplicate file must be resolved in CurseForge; no alternate filename was attempted)." >&2
-              jq -r '.errorMessage // .message // "Response was not a recognized JSON error."' "$response_file" 2>/dev/null >&2 || true
-              exit 1
-            fi
-            curseforge_id="$(jq -er '.id | select(type == "number")' "$response_file")" || {
-              echo "CurseForge response did not contain a numeric file id." >&2
-              exit 1
-            }
-            marker="<!-- curseforge-file-id: $curseforge_id -->"
-            body="${body:-Initial automated release of Spyglass $VERSION.}"
-            notes_file="$(mktemp)"
-            printf '%s\n\n%s\n\nSHA-256: `%s`\n' "$body" "$marker" "$checksum" > "$notes_file"
-            gh release edit "$TAG" --notes-file "$notes_file"
-          fi
-
           gh release edit "$TAG" --draft=false --prerelease=false
           release_url="$(gh release view "$TAG" --json url --jq .url)"
-          printf '### Published release\n\n- GitHub: %s\n- CurseForge file ID: `%s`\n- CurseForge project: https://www.curseforge.com/hytale/mods/spyglass\n- SHA-256: `%s`\n' \
-            "$release_url" "$curseforge_id" "$checksum" >> "$GITHUB_STEP_SUMMARY"
+          printf '### Published release\n\n- GitHub: %s\n- JAR: `Spyglass-%s.jar`\n- SHA-256: `%s`\n' \
+            "$release_url" "$VERSION" "$checksum" >> "$GITHUB_STEP_SUMMARY"
