@@ -32,7 +32,7 @@ dependencies {
     // Hytale Server API (provided by server at runtime)
     compileOnly("com.hypixel.hytale:Server:$hytaleVersion")
     // Common dependencies (will be bundled in JAR)
-    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.code.gson:gson:2.14.0")
     implementation("org.jetbrains:annotations:24.1.0")
 
     // Test dependencies
